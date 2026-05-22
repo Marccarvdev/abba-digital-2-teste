@@ -1,0 +1,21 @@
+{
+  "name": "ABBA DIGITAL - Ábaco brasileiro de alfabetização bilíngue",
+  "short_name": "ABBA DIGITAL",
+  "description": "Mova os cubos para formar palavras e aprenda o alfabeto de forma divertida e offline.",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#FFFFFF",
+  "theme_color": "#EF4444",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["education", "games"],
+  "dir": "ltr",
+  "lang": "pt-BR"
+}

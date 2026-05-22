@@ -1,0 +1,210 @@
+# Documentação Detalhada do Aplicativo: Ábaco de Alfabetização Bilíngue e Soletração
+
+Este documento descreve detalhadamente a arquitetura do aplicativo, a função de cada arquivo, as variáveis de estado, as funções lógicas e o histórico completo de todas as alterações e melhorias refinadas implementadas até aqui.
+
+---
+
+## 📅 Visão Geral do Sistema
+
+O **Ábaco de Alfabetização Bilíngue** é um aplicativo educacional interativo que simula um teclado físico/virtual composto por **Cubes (blocos de letras)** contendo números ordinais (indicando a sequência alfabética, ex: `1°` para A, `24°` para X). O usuário pode arrastar ou clicar nos blocos para soletrar palavras em uma ou mais linhas horizontais de preenchimento, estabelecendo conexões físicas de "fios de costura de couro" suspensos entre a prateleira superior de letras e os slots do tabuleiro.
+
+O diferencial do sistema está no **suporte bilíngue e agrupamento inteligente por tradução**:
+1. O usuário altera os idiomas de destino de cada linha clicando no seletor integrado (representado por bolinhas coloridas e bandeiras).
+2. Cada cor representa um país e seu respectivo idioma:
+   - **Preto**: Brasil 🇧🇷 (Português - pt-BR)
+   - **Azul**: Estados Unidos 🇺🇸 (Inglês - en-US)
+   - **Vermelho**: Alemanha 🇩🇪 (Alemão - de-DE)
+   - **Verde**: Itália 🇮🇹 (Italiano - it-IT)
+3. Ao salvar uma linha de palavras soletradas, o aplicativo faz uma chamada assíncrona para a API pública de tradução da MyMemory. Ele detecta automaticamente o idioma selecionado do bloco e traduz a palavra para o Português do Brasil para **agrupar de forma unificada e inteligente as palavras similares**.
+   - Por exemplo, as palavras salvas **"AMOR"** (Bandeira do Brasil), **"LOVE"** (Bandeira dos EUA) e **"LIEBE"** (Bandeira da Alemanha) serão automaticamente agrupadas juntas na mesma caixa de aprendizado cujo significado comum é "AMOR".
+4. O usuário pode realizar arrastes dinâmicos avançados (Drag & Drop) para arrastar blocos entre prateleiras, mover letras livremente na horizontal, agrupar blocos salvos em outras categorias ou desagrupá-los puxando-os para fora do grupo cinza claro.
+
+---
+
+## 📁 Árvore de Arquivos e Funções de Cada Componente
+
+O projeto adota uma arquitetura limpa em **React**, **TypeScript** e **Tailwind CSS**, organizada do seguinte modo:
+
+```text
+/
+├── index.html                   # Esqueleto básico HTML e contêiner raiz do App
+├── package.json                 # Especificações de compilação, scripts e dependências (React, Framer Motion)
+├── tsconfig.json                # Configurações de rigidez e compilação do TypeScript
+├── vite.config.ts               # Configuração e regras de empacotamento do Vite
+├── metadata.json                # Metadados e permissões do applet do sistema
+├── server.ts                    # Servidor Express utilizado para proxy de API se configurado full-stack
+├── sobre_o_aplicativo.txt      # Este documento explicativo e manual do desenvolvedor
+└── src/
+    ├── main.tsx                 # Entrada de execução que renderiza o nó de React no DOM
+    ├── App.tsx                  # Coração lógico do app, contendo os estados globais e renders principais
+    ├── types.ts                 # Definições de Tipos e Interfaces de segurança estática do TypeScript
+    ├── data.ts                  # Informações estáticas (lista de letras do alfabeto e palavras predefinidas)
+    ├── index.css                # Estilos globais e injeção do Tailwind CSS
+    └── components/              # Mini-módulos visuais independentes e reutilizáveis
+        ├── Confetti.tsx         # Animações de celebração ao atingir conquistas
+        ├── LetterCube.tsx       # Renderização geométrica em 3D dos blocos de letras
+        ├── SpeechToggle.tsx     # Gerenciamento de pronúncia em áudio por síntese de voz (TTS)
+        ├── WordIllustration.tsx # Pequenas imagens vetoriais (SVG) para as categorias dos presets
+        └── PWAInstallButton.tsx # Auxiliar para instalação local como aplicativo móvel (PWA)
+```
+
+---
+
+## 🛠️ Detalhamento Arquitetural: O que cada arquivo faz
+
+### 1. Root-level Configs (Configurações Gerais)
+*   **`index.html`**: Fornece o contêiner DOM (`div id="root"`) para montagem da árvore do React. Importa a fonte do Google Fonts (`Space Grotesk` para display industrial/tech e `JetBrains Mono` para dados técnicos ordinais) e define configurações iniciais de viewport para mobile.
+*   **`package.json`**: Gerencia scripts essenciais do ecossistema:
+    - `dev`: Inicia o servidor Vite local na porta `3000`.
+    - `build`: Cria os ativos estáticos otimizados na pasta `/dist`.
+    - `lint`: Usa o TypeScript compiler (`tsc --noEmit`) para verificar erros de tipo e lint antes da entrega de builds produtivas.
+*   **`vite.config.ts`**: Plugin de processamento de asset do Vite, habilitando empacotamento rápido e compatibilidade total com módulos modernos ES.
+
+### 2. Pasta `/src`
+
+#### 📄 `/src/types.ts`
+Define as estruturas fundamentais para garantir que o TypeScript impeça erros de desenvolvimento em tempo de compilação:
+*   `LetterCubeData`: Modelo de uma letra do alfabeto físico. Contém `id`, `primaryLetter`, `primaryOrdinal` e propriedades opcionais para blocos compostos/divididos de dois lados (como `isSplit`, `secondaryLetter` e `secondaryOrdinal` para C/Ç e V/W).
+*   `SpelledLetter`: Representa um bloco que foi instanciado e colocado na linha de soletração ativa no tabuleiro. Contém propriedades exclusivas para essa instância, como seu próprio `id` transiente único, cor do fio (`color`) e a origem do bloco (`originCubeId`).
+*   `SavedWord`: Alvo final após salvar uma linha. Guarda a palavra crua em string (`word`), o conjunto representativo de blocos (`SpelledLetter[]`) e sua cor de tema de idioma associada (`themeColor`).
+*   `PresetWord`: Estrutura as palavras fixas de ajuda inicial (como DADO, CARRO, etc.) contendo dica (`hint`), categoria, dificuldade e tipo de ilustração visual de acompanhamento (`iconType`).
+
+#### 📄 `/src/data.ts`
+Contém as definições estáticas do aplicativo:
+*   `ALPHABET_CUBES`: Lista ordenada de todas as letras que aparecem na prateleira superior de seleção, contendo a letra e sua posição ordinal real na língua portuguesa (A=1°, G=7°, Z=26°). Configura as teclas compostas de uso duplo `C (Ç)` e `V (W)`.
+*   `PRESET_WORDS`: Uma biblioteca estruturada de palavras de exemplo de categorias variadas (Ex: DADO, CARRO, CÃO, SOL, LIVRO) que os usuários podem carregar diretamente para ver sugestões visuais.
+
+#### 📄 `/src/index.css`
+Injeta o motor Tailwind CSS com configurações de fontes globais personalizadas no tema:
+```css
+@theme {
+  --font-sans: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+}
+```
+Contém melhorias customizadas para esconder barras de rolagem nativas feias nas linhas horizontais mantendo o suporte ao toque, além de configurar efeitos cursor-grab e resets de layout móveis.
+
+#### 📄 `/src/main.tsx`
+Instancia a diretiva `createRoot` do React e aninha o componente principal `<App />` dentro do modo estrito (`React.StrictMode`) para depuração de fluxo de dados.
+
+---
+
+### 3. Pasta `/src/components` (Sub-módulos Isolados)
+
+#### 📄 `components/LetterCube.tsx`
+Renderiza graficamente os blocos nos modos correspondentes de visualização:
+*   **Visual 3D de Cubo (`variant="cube"`)**: Usado na prateleira superior e nas indicações mecânicas. Possui perspectiva estilizada de profundidade 3D com sombras e bordas finas imitando madeira esculpida.
+*   **Visual Quadrado de Letra Solta (`variant="square"`)**: Usado nas linhas horizontais e nos grupos de palavras salvas para assegurar legibilidade nítida em alta densidade de caracteres.
+*   **Propriedades**:
+    - `data`: Interface `LetterCubeData` ou mapeada.
+    - `interactive`: Se mudar de estado ao passar o cursor por cima.
+    - `isSplitActive`: Renderiza a letra secundária em destaque para blocos compartilhados.
+    - `themeColor`: Cor hex que define a borda, o fundo transparente ou as âncoras físicas do biquinho superior (onde prende o gancho do fio de costura).
+
+#### 📄 `components/SpeechToggle.tsx`
+Lógica de Text-To-Speech (TTS) adaptável:
+*   **Função**: Lê palavras em voz alta de acordo com a pronúncia correta de cada idioma selecionado.
+*   **Idiomas de voz mapeados automaticamente**:
+    - **Português (Brasil)**: para linhas pretas (`pt-BR`).
+    - **Inglês (Estados Unidos)**: para linhas azuis (`en-US`).
+    - **Alemão (Alemanha)**: para linhas vermelhas (`de-DE`).
+    - **Italiano (Itália)**: para linhas italianas (`it-IT`).
+*   **Tecnologia**: Utiliza a SpeechSynthesis API do navegador de forma robusta e assíncrona, pré-carregando os pacotes locais de voz no primeiro clique para evitar atrasos ou vozes mudas.
+
+#### 📄 `components/WordIllustration.tsx`
+Gera ilustrações vetoriais (SVG) elegantes baseadas em tags atribuídas do Preset de Palavras:
+*   Selecione ícones estilizados minimalistas de dado (`dice`), carro (`car`), estrela (`star`), sol (`sun`), gato (`cat`), livro (`book`), fruta/morango (`fruit`) e coroa (`crown`).
+
+#### 📄 `components/Confetti.tsx`
+Gera fatias coloridas em queda de confetes no navegador usando uma biblioteca canvas dinâmica leve para comemoração e validação de conquistas do aluno.
+
+---
+
+### 4. O Coração do Aplicativo: `src/App.tsx`
+
+`App.tsx` reúne as regras de negócio de colisão geométrica, layout responsivo em grid com cordas físicas suspensas e as integrações do fluxo de tradução.
+
+#### Principais Variáveis de Estado (States)
+1.  `spelledRows`: Matriz multidimensional (`SpelledLetter[][]`) contendo as letras ativas de cada linha de escrita do tabuleiro. O aplicativo suporta múltiplas linhas independentes simultaneamente.
+2.  `activeRowIdx`: Índice numérico correspondente à linha atualmente focada para inserção automática por cliques na prateleira de letras.
+3.  `rowColors`: Dicionário `Record<number, 'black' | 'blue' | 'red' | 'green'>` que associa cada índice de linha à sua cor de idioma configurada.
+4.  `rowActiveModes`: Dicionário que mapeia o modo ativo no controle de pílula à esquerda da linha (`'save' | 'scissors' | 'trash' | null`).
+5.  `cutWiresRows`: Controle booleano indicando se o usuário clicou na "Tesoura" para cortar visualmente a corda pendurada daquela linha específica do tabuleiro.
+6.  `savedWordsList`: Lista de palavras e grupos que foram traduzidos e salvos na parte de baixo do layout.
+7.  `deletedRowsHistory`: Pilha de histórico usada para a função "Desfazer Última Exclusão" (ícone de desfazer perto da lixeira global).
+
+---
+
+## 📈 Histórico Completo de Alterações e Correções do Aplicativo
+
+Aqui estão as soluções e correções avançadas aplicadas cirurgicamente no projeto para atingir máxima fluidez mecânica no mobile e desktop:
+
+### I. Otimizações de Movimentação Físico-Mecânica (Drag & Drop)
+*   **Problemática**: Em dispositivos móveis e touchpads com suporte a toques nativos, o arraste sofria atrasos e gerava ações desnecessárias de rolagem vertical da página, impedindo o usuário de puxar as letras livremente.
+*   **Soluções Aplicadas**:
+    1.  Inserimos ouvintes do pointer com a opção `{ passive: false }` para bloquear explicitamente a ação de scroll nativa do navegador exatamente quando um arraste começa.
+    2.  Expandimos os limites protetores em `isPointerInsideTray` para dar uma tolerância horizontal e vertical gigantesca no tamanho de detecção do drop, permitindo deslizadas rápidas e informais típicas de crianças pequenas que jogam no celular.
+    3.  Desabilitamos regras limitantes como as correções rígidas horizontais de delta de toques para que o arraste em touchscreens dispare de forma instantânea e totalmente fluida em qualquer vetor de movimento.
+
+### II. O Mecanismo Inteligente de Identificação de Drop das Linhas (`findRowAtCoords`) — **CORREÇÃO FINAL ANTE-VIÉS**
+*   **Problemática**: Nas versões anteriores, quando o tabuleiro possuía múltiplas linhas empilhadas na vertical e o usuário tentava arrastar e soltar uma letra na **área de baixo (segunda ou terceira linha)**, o sistema frequentemente interpretava que a letra deveria ir para a **linha superior (primeira linha)**. Esse viés de preferência superior estragava a experiência do usuário e criava um "bloqueio de colisão" irritante.
+*   **A Causa**: No algoritmo anterior, a rotina de busca de colisão percorria as coordenadas checando colisões absolutas de retângulo (`rect.top`, `rect.bottom`) ou aplicava cálculo de distância baseado puramente na borda das caixas. Com o layout flexível encolhendo ou crescendo dinamicamente, os retângulos se cruzavam em termos de margens de toque, fazendo o looping bater sempre na primeira linha da lista (primeira correspondência positiva) mesmo se o cursor estivesse muito mais próximo do centro da linha de baixo.
+*   **O Refinamento Perfeito Realizado**:
+    Substituímos todo o procedimento por uma lógica matemática de **Proximidade Absoluta ao Ponto Central Vertical (Center-Y Proximity)**:
+    ```typescript
+    const findRowAtCoords = (x: number, y: number): { element: Element; index: number } | null => {
+      const rowEls = document.querySelectorAll('[data-row-container-idx]');
+      if (rowEls.length === 0) return null;
+      let closestRowEl: Element | null = null;
+      let minDistance = Infinity;
+      let closestIdx = -1;
+      
+      for (let i = 0; i < rowEls.length; i++) {
+        const el = rowEls[i];
+        const rect = el.getBoundingClientRect();
+        
+        // Usamos o ponto central da linha como a âncora matemática de colisão!
+        // Isso é imune a encolhimentos, margens invisíveis ou viés de posicionamento superior.
+        const centerY = rect.top + rect.height / 2;
+        const distY = Math.abs(y - centerY);
+        
+        if (distY < minDistance) {
+          minDistance = distY;
+          closestRowEl = el;
+          const rIdx = parseInt(el.getAttribute('data-row-container-idx') || '', 10);
+          if (!isNaN(rIdx)) {
+            closestIdx = rIdx;
+          }
+        }
+      }
+      if (closestRowEl && closestIdx !== -1) {
+        return { element: closestRowEl, index: closestIdx };
+      }
+      return null;
+    };
+    ```
+    - **Resultado**: Agora o sistema identifica perfeitamente e sem qualquer erro para qual linha o bloco de letra está apontando. Se o cursor estiver na metade de baixo, soltará perfeitamente na linha de baixo, sem viés ou salto errático para a linha de cima.
+
+### III. Barra de Rolagem Horizontal Fluida nas Linhas do Tabuleiro
+*   **Problemática**: Quando uma palavra soletrada ficava muito longa (ex: mais de 8 ou 10 blocos de letras), os cubos transbordavam a largura do layout.
+*   **Soluções Aplicadas**:
+    1.  Adicionamos contêineres de scroll horizontal nativo com toque flúido em cada linha.
+    2.  Implementamos **Trackbars de Scroll customizados**: pequenas barrinhas estéticas horizontais discretas logo abaixo de cada linha de escrita.
+    3.  Demos suporte de **arrastar para movimentar o scroll lateral**: o usuário pode arrastar a barrinha com o mouse ou dedo e deslizar suavemente para ver o resto de palavras compridas.
+    4.  Adicionamos um recurso dinâmico que detecta quando um cubo é arrastado para perto da borda direita ou esquerda de uma linha transbordada, fazendo com que a tela de escrita role automaticamente para o lado na direção do arraste!
+
+### IV. Mecânica de Linhas e Menu Pill Capsule individual (Controles Laterais)
+*   **Melhoria**: Ao lado esquerdo de cada linha, criamos uma cápsula cinza refinada que oferece três controles fáceis de usar:
+    - **Salvar / Bookmark (Verde)**: Envia a palavra soletrada ao banco inferior de salvamentos, disparando o fluxo de comemoração dinâmico e tradução online.
+    - **Tesoura / Corte de Fio (Dourado/Verde)**: Corta sob demanda os fios gráficos conectores daquela linha de escrita específica, liberando as letras visualmente dos eixos de gravidade.
+    - **Lixeira (Vermelho)**: Clones e exclusões de linhas com histórico. Um duplo clique no botão vermelho limpa aquela linha e armazena os dados para reconstrução instantânea através do botão "Undo" de refazer.
+
+### V. Tradução Dinâmica à Prova de Falhas e Tratamento de Duplicidades
+*   **Filtro Anti-Duplicidade**: O painel inferior agrupa palavras iguais automaticamente. Se você já tem a palavra "GATO" salva com a bandeira do Brasil, o aplicativo impede a adição desnecessária de outra palavra idêntica nela, mantendo a coleção de estudos organizada.
+*   **Fallback Inteligente de Idiomas**: Se o serviço de tradução da MyMemory estiver indisponível ou retornar erro de limite (limitação de cota externa API), o aplicativo detecta o evento de forma amigável no console de eventos e usa a resposta adaptativa inteligente para organizar o bloco na biblioteca local de soletração, mantendo o software 100% livre de travamentos ou telas brancas.
+
+---
+
+## 🎯 Conclusão sobre as Novas Correções
+
+O aplicativo está em seu estado de mais alta robustez técnica. A experiência de jogo de arrastar e soltar letras da prateleira até as colunas selecionáveis foi corrigida na raiz, garantindo que o drop de blocos na parte inferior ou superior atinja a respectiva linha selecionada pelo usuário com precisão cirúrgica de coordenadas center-Y. Toda e qualquer inconsistência física foi eliminada para habilitar o máximo potencial gamificado do Ábaco Bilíngue de Alfabetização!

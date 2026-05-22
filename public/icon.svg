@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <radialGradient id="bg-grad" cx="50%" cy="50%" r="75%">
+      <stop offset="0%" stop-color="#FFFFFF" />
+      <stop offset="100%" stop-color="#F3F4F6" />
+    </radialGradient>
+    <style>
+      .bg-rect { fill: url(#bg-grad); rx: 112px; }
+      .cube {
+        fill: none;
+        stroke: #EF4444;
+        stroke-width: 10;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+      .letter {
+        font-family: 'Space Grotesk', 'Inter', system-ui, sans-serif;
+        font-weight: 800;
+        fill: #EF4444;
+      }
+      .sup {
+        font-family: 'Space Grotesk', 'Inter', system-ui, sans-serif;
+        font-weight: 700;
+        fill: #EF4444;
+      }
+      .cap {
+        fill: #111827;
+      }
+    </style>
+  </defs>
+
+  <!-- Background Card -->
+  <rect width="512" height="512" class="bg-rect" />
+
+  <!-- Cube Visual -->
+  <g transform="translate(46, 75) scale(1)">
+    <!-- Back-Left of Custom Cube -->
+    <path class="cube" d="
+      M60 60 L260 60 L260 260 L60 260 Z
+      M130 130 L330 130 L330 330 L130 330 Z
+      M60 60 L130 130
+      M260 60 L330 130
+      M260 260 L330 330
+      M60 260 L130 330
+    "/>
+    
+    <!-- Large letter A inside the front face (130,130) to (330,330) -->
+    <text x="230" y="260" font-size="110" text-anchor="middle" class="letter">A</text>
+    <text x="295" y="175" font-size="32" text-anchor="middle" class="sup">1°</text>
+  </g>
+
+  <!-- Graduation Cap (Aprendite logo overlay at top) -->
+  <g transform="translate(325, 40) scale(0.9)">
+    <!-- Cap top -->
+    <path class="cap" d="M70 20 L130 40 L70 60 L10 40 Z" />
+    <!-- Cap base -->
+    <path class="cap" d="M30 47 v10 c0 10 20 15 40 15 s40-5 40-15 v-10" />
+    <!-- Tassel -->
+    <path d="M100 45 v15 c0 4 3 7 3 10" fill="none" stroke="#111827" stroke-width="4" stroke-linecap="round" />
+  </g>
+</svg>
