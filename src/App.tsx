@@ -1292,10 +1292,23 @@ export default function App() {
     window.addEventListener('pointerup', handlePointerUp);
     window.addEventListener('pointercancel', handlePointerCancel);
 
+    const handleGlobalTouch = (e: TouchEvent) => {
+      const target = e.target as HTMLElement;
+      const isDraggable = target.closest('[data-shelf-idx]') || target.closest('[data-slot-idx]') || target.closest('.cursor-grab');
+      if (isDraggable && e.cancelable) {
+        e.preventDefault();
+      }
+    };
+
+    window.addEventListener('touchstart', handleGlobalTouch, { passive: false });
+    window.addEventListener('touchmove', handleGlobalTouch, { passive: false });
+
     return () => {
       window.removeEventListener('pointermove', handlePointerMove);
       window.removeEventListener('pointerup', handlePointerUp);
       window.removeEventListener('pointercancel', handlePointerCancel);
+      window.removeEventListener('touchstart', handleGlobalTouch);
+      window.removeEventListener('touchmove', handleGlobalTouch);
     };
   }, []);
 
