@@ -130,7 +130,7 @@ export const LetterCube: React.FC<LetterCubeProps> = ({
           strokeLinecap="butt"
           strokeLinejoin="miter"
           strokeMiterlimit="50"
-          style={{ shapeRendering: 'crispEdges' }}
+          style={{ shapeRendering: 'crispEdges', transition: 'stroke 0.4s cubic-bezier(0.16, 1, 0.3, 1)' }}
         />
 
         {/* Content of the face - inside the front face (53.4083, 53.4083) to (198.861, 198.861) */}
@@ -146,7 +146,8 @@ export const LetterCube: React.FC<LetterCubeProps> = ({
                 fontFamily: "'Montserrat', 'Outfit', sans-serif",
                 fontWeight: 850,
                 fill: themeColor,
-                userSelect: 'none'
+                userSelect: 'none',
+                transition: 'fill 0.4s cubic-bezier(0.16, 1, 0.3, 1)'
               }}
             >
               {primaryLetter}
@@ -161,7 +162,8 @@ export const LetterCube: React.FC<LetterCubeProps> = ({
                 fontFamily: "'Montserrat', 'Outfit', sans-serif",
                 fontWeight: 700,
                 fill: themeColor,
-                userSelect: 'none'
+                userSelect: 'none',
+                transition: 'fill 0.4s cubic-bezier(0.16, 1, 0.3, 1)'
               }}
             >
               {primaryOrdinal}
@@ -210,7 +212,8 @@ export const LetterCube: React.FC<LetterCubeProps> = ({
                         fontFamily: "'Montserrat', 'Outfit', sans-serif",
                         fontWeight: 850,
                         fill: themeColor,
-                        userSelect: 'none'
+                        userSelect: 'none',
+                        transition: 'fill 0.4s cubic-bezier(0.16, 1, 0.3, 1)'
                       }}
                     >
                       {selectedLetterKey}
@@ -225,7 +228,8 @@ export const LetterCube: React.FC<LetterCubeProps> = ({
                         fontFamily: "'Montserrat', 'Outfit', sans-serif",
                         fontWeight: 700,
                         fill: themeColor,
-                        userSelect: 'none'
+                        userSelect: 'none',
+                        transition: 'fill 0.4s cubic-bezier(0.16, 1, 0.3, 1)'
                       }}
                     >
                       {activeOrdinal}
@@ -246,6 +250,7 @@ export const LetterCube: React.FC<LetterCubeProps> = ({
                   strokeWidth="8.5"
                   strokeLinecap="butt"
                   strokeLinejoin="miter"
+                  style={{ transition: 'stroke 0.4s cubic-bezier(0.16, 1, 0.3, 1)' }}
                 />
 
                 {/* Top-Left Half */}
@@ -260,7 +265,8 @@ export const LetterCube: React.FC<LetterCubeProps> = ({
                       fontFamily: "'Montserrat', 'Outfit', sans-serif",
                       fontWeight: 850,
                       fill: themeColor,
-                      userSelect: 'none'
+                      userSelect: 'none',
+                      transition: 'fill 0.4s cubic-bezier(0.16, 1, 0.3, 1)'
                     }}
                   >
                     {primaryLetter}
@@ -275,7 +281,8 @@ export const LetterCube: React.FC<LetterCubeProps> = ({
                       fontFamily: "'Montserrat', 'Outfit', sans-serif",
                       fontWeight: 700,
                       fill: themeColor,
-                      userSelect: 'none'
+                      userSelect: 'none',
+                      transition: 'fill 0.4s cubic-bezier(0.16, 1, 0.3, 1)'
                     }}
                   >
                     {primaryOrdinal}
@@ -294,7 +301,8 @@ export const LetterCube: React.FC<LetterCubeProps> = ({
                       fontFamily: "'Montserrat', 'Outfit', sans-serif",
                       fontWeight: 850,
                       fill: themeColor,
-                      userSelect: 'none'
+                      userSelect: 'none',
+                      transition: 'fill 0.4s cubic-bezier(0.16, 1, 0.3, 1)'
                     }}
                   >
                     {secondaryLetter || ''}
@@ -310,7 +318,8 @@ export const LetterCube: React.FC<LetterCubeProps> = ({
                         fontFamily: "'Montserrat', 'Outfit', sans-serif",
                         fontWeight: 700,
                         fill: themeColor,
-                        userSelect: 'none'
+                        userSelect: 'none',
+                        transition: 'fill 0.4s cubic-bezier(0.16, 1, 0.3, 1)'
                       }}
                     >
                       {secondaryOrdinal}

@@ -1,0 +1,253 @@
+# Instructions
+
+- Following Playwright test failed.
+- Explain why, be concise, respect Playwright best practices.
+- Provide a snippet of code with the fix, if possible.
+
+# Test info
+
+- Name: e2e\test-color-inheritance.spec.ts >> novo bloco herda cor da linha
+- Location: e2e\test-color-inheritance.spec.ts:3:1
+
+# Error details
+
+```
+Test timeout of 30000ms exceeded.
+```
+
+```
+Error: locator.dragTo: Test timeout of 30000ms exceeded.
+Call log:
+  - waiting for locator('[data-shelf-idx="0"]')
+    - locator resolved to <div data-shelf-idx="0" class="aspect-square w-full shrink-0 text-left relative z-20">…</div>
+  - attempting move and down action
+    2 × waiting for element to be visible and stable
+      - element is visible and stable
+      - scrolling into view if needed
+      - done scrolling
+      - <div class="flex flex-col items-center justify-center select-none max-w-xl w-full pt-4 sm:pt-8 pb-16 mt-4">…</div> from <div title="Ábaco Brasileiro de Alfabetização" class="fixed inset-0 bg-white z-[9999] overflow-y-auto flex flex-col items-center py-12 px-6 select-none cursor-default">…</div> subtree intercepts pointer events
+    - retrying move and down action
+    - waiting 20ms
+    - waiting for element to be visible and stable
+    - element is visible and stable
+    - scrolling into view if needed
+    - done scrolling
+    - <div class="flex flex-col items-center justify-center select-none max-w-xl w-full pt-4 sm:pt-8 pb-16 mt-4">…</div> from <div title="Ábaco Brasileiro de Alfabetização" class="fixed inset-0 bg-white z-[9999] overflow-y-auto flex flex-col items-center py-12 px-6 select-none cursor-default">…</div> subtree intercepts pointer events
+  2 × retrying move and down action
+      - waiting 100ms
+      - waiting for element to be visible and stable
+      - element is visible and stable
+      - scrolling into view if needed
+      - done scrolling
+      - <div title="Ábaco Brasileiro de Alfabetização" class="fixed inset-0 bg-white z-[9999] overflow-y-auto flex flex-col items-center py-12 px-6 select-none cursor-default">…</div> intercepts pointer events
+  12 × retrying move and down action
+       - waiting 500ms
+       - waiting for element to be visible and stable
+       - element is visible and stable
+       - scrolling into view if needed
+       - done scrolling
+       - <div class="flex flex-col items-center justify-center select-none max-w-xl w-full pt-4 sm:pt-8 pb-16 mt-4">…</div> from <div title="Ábaco Brasileiro de Alfabetização" class="fixed inset-0 bg-white z-[9999] overflow-y-auto flex flex-col items-center py-12 px-6 select-none cursor-default">…</div> subtree intercepts pointer events
+     - retrying move and down action
+       - waiting 500ms
+       - waiting for element to be visible and stable
+       - element is visible and stable
+       - scrolling into view if needed
+       - done scrolling
+       - <div class="flex flex-col items-center justify-center select-none max-w-xl w-full pt-4 sm:pt-8 pb-16 mt-4">…</div> from <div title="Ábaco Brasileiro de Alfabetização" class="fixed inset-0 bg-white z-[9999] overflow-y-auto flex flex-col items-center py-12 px-6 select-none cursor-default">…</div> subtree intercepts pointer events
+     - retrying move and down action
+       - waiting 500ms
+       - waiting for element to be visible and stable
+       - element is visible and stable
+       - scrolling into view if needed
+       - done scrolling
+       - <div title="Ábaco Brasileiro de Alfabetização" class="fixed inset-0 bg-white z-[9999] overflow-y-auto flex flex-col items-center py-12 px-6 select-none cursor-default">…</div> intercepts pointer events
+     - retrying move and down action
+       - waiting 500ms
+       - waiting for element to be visible and stable
+       - element is visible and stable
+       - scrolling into view if needed
+       - done scrolling
+       - <div title="Ábaco Brasileiro de Alfabetização" class="fixed inset-0 bg-white z-[9999] overflow-y-auto flex flex-col items-center py-12 px-6 select-none cursor-default">…</div> intercepts pointer events
+  - retrying move and down action
+    - waiting 500ms
+    - waiting for element to be visible and stable
+    - element is visible and stable
+    - scrolling into view if needed
+    - done scrolling
+    - <div class="flex flex-col items-center justify-center select-none max-w-xl w-full pt-4 sm:pt-8 pb-16 mt-4">…</div> from <div title="Ábaco Brasileiro de Alfabetização" class="fixed inset-0 bg-white z-[9999] overflow-y-auto flex flex-col items-center py-12 px-6 select-none cursor-default">…</div> subtree intercepts pointer events
+  - retrying move and down action
+    - waiting 500ms
+
+```
+
+# Page snapshot
+
+```yaml
+- generic [ref=e3]:
+  - generic "Ábaco Brasileiro de Alfabetização" [ref=e4]:
+    - generic [ref=e5]:
+      - generic [ref=e6]:
+        - img "ABBA Logo"
+      - generic [ref=e8]:
+        - generic [ref=e9]: ÁBACO
+        - generic [ref=e10]: BRASILEIRO
+        - generic [ref=e11]: DE
+        - generic [ref=e12]: AL-FA-BE-TI-ZA-ÇÃO
+        - generic [ref=e13]: bilingüe
+        - generic [ref=e14]:
+          - generic [ref=e15]: em Português, Espanhol, Italiano,
+          - generic [ref=e16]: Francês, Inglês e Alemão
+        - generic [ref=e17]:
+          - generic [ref=e18]: "AUTOR: JOSÉ DECIO DE ALENCAR"
+          - generic [ref=e19]:
+            - generic [ref=e20]: Gestor de PD&I-Projetos de
+            - generic [ref=e21]: desenvolvimento e inovação
+        - generic [ref=e22]: Inovação Brasileira no Ensino de Línguas Estrangeiras
+        - generic [ref=e23]: BLUMENAU - SANTA CATARINA - BRASIL
+        - generic [ref=e25] [cursor=pointer]:
+          - generic [ref=e26]: Rolar para Baixo
+          - img [ref=e27]
+        - generic [ref=e29]:
+          - button "Entrar no App" [ref=e30] [cursor=pointer]
+          - generic [ref=e31]: Clique para iniciar sua experiência de alfabetização bilingue
+  - banner [ref=e32]:
+    - generic [ref=e34]:
+      - img "ABBA Logo" [ref=e35]
+      - generic [ref=e36]:
+        - heading "ABBA DIGITAL" [level=1] [ref=e37]
+        - paragraph [ref=e38]: Ábaco Brasileiro de Alfabetização Bilingue
+  - main [ref=e39]:
+    - heading "Inovação Brasileira no ensino de línguas estrangeiras." [level=2] [ref=e41]
+    - generic [ref=e42]:
+      - generic [ref=e43]:
+        - button "Clique para trocar o idioma e as cores do alfabeto" [ref=e44] [cursor=pointer]:
+          - img [ref=e45]
+        - button "Habilitar substituir cubos no painel" [ref=e49] [cursor=pointer]:
+          - img [ref=e50]
+      - generic [ref=e55]:
+        - generic [ref=e58] [cursor=pointer]:
+          - img:
+            - generic: A
+            - generic: 1°
+        - generic [ref=e62] [cursor=pointer]:
+          - img:
+            - generic: B
+            - generic: 2°
+        - generic [ref=e66] [cursor=pointer]:
+          - img:
+            - generic:
+              - generic: C
+              - generic: 3°
+            - generic:
+              - generic: Ç
+        - generic [ref=e71] [cursor=pointer]:
+          - img:
+            - generic: D
+            - generic: 4°
+        - generic [ref=e75] [cursor=pointer]:
+          - img:
+            - generic: E
+            - generic: 5°
+        - generic [ref=e79] [cursor=pointer]:
+          - img:
+            - generic: F
+            - generic: 6°
+        - generic [ref=e83] [cursor=pointer]:
+          - img:
+            - generic: G
+            - generic: 7°
+        - generic [ref=e87] [cursor=pointer]:
+          - img:
+            - generic: H
+            - generic: 8°
+        - generic [ref=e91] [cursor=pointer]:
+          - img:
+            - generic: I
+            - generic: 9°
+        - generic [ref=e95] [cursor=pointer]:
+          - img:
+            - generic: J
+            - generic: 10°
+        - generic [ref=e99] [cursor=pointer]:
+          - img:
+            - generic: K
+            - generic: 11°
+        - generic [ref=e103] [cursor=pointer]:
+          - img:
+            - generic: L
+            - generic: 12°
+        - generic [ref=e107] [cursor=pointer]:
+          - img:
+            - generic: M
+            - generic: 13°
+        - generic [ref=e111] [cursor=pointer]:
+          - img:
+            - generic: "N"
+            - generic: 14°
+        - generic [ref=e115] [cursor=pointer]:
+          - img:
+            - generic: O
+            - generic: 15°
+        - generic [ref=e119] [cursor=pointer]:
+          - img:
+            - generic: P
+            - generic: 16°
+        - generic [ref=e123] [cursor=pointer]:
+          - img:
+            - generic: Q
+            - generic: 17°
+        - generic [ref=e127] [cursor=pointer]:
+          - img:
+            - generic: R
+            - generic: 18°
+        - generic [ref=e131] [cursor=pointer]:
+          - img:
+            - generic: S
+            - generic: 19°
+        - generic [ref=e135] [cursor=pointer]:
+          - img:
+            - generic: T
+            - generic: 20°
+        - generic [ref=e139] [cursor=pointer]:
+          - img:
+            - generic: U
+            - generic: 21°
+        - generic [ref=e143] [cursor=pointer]:
+          - img:
+            - generic:
+              - generic: V
+              - generic: 22°
+            - generic:
+              - generic: W
+              - generic: 23°
+        - generic [ref=e148] [cursor=pointer]:
+          - img:
+            - generic: X
+            - generic: 24°
+        - generic [ref=e152] [cursor=pointer]:
+          - img:
+            - generic: "Y"
+            - generic: 25°
+        - generic [ref=e156] [cursor=pointer]:
+          - img:
+            - generic: Z
+            - generic: 26°
+    - generic [ref=e160]:
+      - generic [ref=e162] [cursor=pointer]:
+        - 'generic "Selecione um modo: Salvar (2 cliques para confirmar), Cortar conexões, ou Excluir (2 cliques para confirmar)" [ref=e164]':
+          - button "Clique uma vez para focar; 2 cliques rápidos para salvar no histórico!" [ref=e165]:
+            - img [ref=e166]
+          - button "Clique uma vez para focar; 2 cliques rápidos para cortar/mostrar as linhas desta palavra" [ref=e168]:
+            - img [ref=e169]
+          - button "Clique uma vez para focar; 2 cliques rápidos para excluir esta palavra" [ref=e175]:
+            - img [ref=e176]
+        - generic [ref=e179]:
+          - generic:
+            - generic: arraste e solte aqui
+      - generic [ref=e180]:
+        - button "Nada para desfazer" [disabled] [ref=e181] [cursor=pointer]:
+          - img [ref=e182]
+        - button "Limpar todas as palavras do tabuleiro" [ref=e186] [cursor=pointer]:
+          - img [ref=e187]
+  - img
+```

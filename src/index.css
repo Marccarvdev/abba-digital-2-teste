@@ -100,6 +100,17 @@ html, body, button, [pointer-events-auto], .cursor-pointer, .cursor-grab, [data-
   transition: filter 0.2s ease, transform 0.2s ease;
 }
 
+/* Drag overlay visual (used by global drag overlay) */
+.drag-overlay {
+  will-change: transform, opacity;
+  transition: transform 120ms ease-out, opacity 120ms ease-out;
+  opacity: 1;
+}
+.drag-overlay.hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
 .cube-shadow:hover {
   filter: drop-shadow(0 20px 13px rgba(239, 68, 68, 0.15));
 }
