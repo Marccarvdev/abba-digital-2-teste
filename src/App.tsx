@@ -2036,12 +2036,6 @@ export default function App() {
 
             {/* SINGLE BOARD CONTAINER (Original style matching the grey dashed card, growing internally) */}
             <motion.div 
-              layout
-              transition={{
-                type: "spring",
-                stiffness: 300,
-                damping: 30
-              }}
               ref={boardRef}
               className="w-full relative rounded-2xl border-2 border-dashed border-gray-200 bg-gray-50/50 p-4 sm:p-5 flex flex-col gap-5"
             >
@@ -2326,35 +2320,32 @@ export default function App() {
                                 
                                 elements.push(
                                   <motion.div 
-                                    layout
-                                    transition={{
-                                      type: "spring",
-                                      stiffness: 380,
-                                      damping: 32
-                                    }}
-                                    key={filledLetterObj.id}
-                                    id={filledLetterObj.id}
-                                    data-row-idx={rIdx}
-                                    data-slot-idx={slotIdx}
-                                    initial={{ opacity: 0, scale: 1, y: 0, rotate: 0 }}
-                                    animate={{ 
-                                      opacity: isBeingDragged ? 0.35 : 1, 
-                                      scale: isBeingReplaced ? 1.08 : (isBeingDragged ? 0.95 : 1), 
-                                      y: 0, 
-                                      rotate: 0,
-                                      boxShadow: isBeingReplaced ? "0px 10px 25px -5px rgba(0,0,0,0.15)" : "0px 2px 8px -3px rgba(0,0,0,0.05)"
-                                    }}
-                                    exit={{ 
-                                      opacity: 0, 
-                                      scale: 0.1, 
-                                      y: 35,
-                                      rotate: -12,
-                                      filter: "blur(4px)",
-                                      transition: { 
-                                        duration: 0.3, 
-                                        ease: [0.16, 1, 0.3, 1]
-                                      } 
-                                    }}
+                                     layout
+                                     transition={{
+                                       type: "spring",
+                                       stiffness: 550,
+                                       damping: 38
+                                     }}
+                                     key={filledLetterObj.id}
+                                     id={filledLetterObj.id}
+                                     data-row-idx={rIdx}
+                                     data-slot-idx={slotIdx}
+                                     initial={{ opacity: 0, scale: 1, y: 0, rotate: 0 }}
+                                     animate={{ 
+                                       opacity: isBeingDragged ? 0.35 : 1, 
+                                       scale: isBeingReplaced ? 1.08 : (isBeingDragged ? 0.95 : 1), 
+                                       y: 0, 
+                                       rotate: 0,
+                                       boxShadow: isBeingReplaced ? "0px 10px 25px -5px rgba(0,0,0,0.15)" : "0px 2px 8px -3px rgba(0,0,0,0.05)"
+                                     }}
+                                     exit={{ 
+                                       opacity: 0, 
+                                       scale: 0.2, 
+                                       transition: { 
+                                         duration: 0.08, 
+                                         ease: "easeOut"
+                                       } 
+                                     }}
                                     className={`relative z-20 min-w-[calc((100vw-6rem)/5)] w-[calc((100vw-6rem)/5)] sm:min-w-[66px] sm:w-[66px] md:min-w-[76px] md:w-[76px] aspect-square flex items-center justify-center rounded-xl cursor-grab active:cursor-grabbing shrink-0 touch-none transition-shadow transition-colors duration-250 ${
                                       isBeingReplaced 
                                         ? 'ring-4 ring-offset-2' 
