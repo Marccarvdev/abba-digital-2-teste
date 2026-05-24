@@ -180,8 +180,15 @@ export default function App() {
   };
 
   // MULTI-LINE SPELLING BOARD STATE
-  const [spelledRows, setSpelledRows] = useState<SpelledLetter[][]>([[]]);
-  const [rowIds, setRowIds] = useState<string[]>(() => ['row-initial-' + Math.random().toString(36).substring(2, 11)]);
+  const [spelledRows, setSpelledRows] = useState<SpelledLetter[][]>([[], [], [], [], [], []]);
+  const [rowIds, setRowIds] = useState<string[]>(() => [
+    'row-initial-1-' + Math.random().toString(36).substring(2, 11),
+    'row-initial-2-' + Math.random().toString(36).substring(2, 11),
+    'row-initial-3-' + Math.random().toString(36).substring(2, 11),
+    'row-initial-4-' + Math.random().toString(36).substring(2, 11),
+    'row-initial-5-' + Math.random().toString(36).substring(2, 11),
+    'row-initial-6-' + Math.random().toString(36).substring(2, 11)
+  ]);
 
   // Spelling rows dynamic lifecycle useEffect is defined below after drag state declarations.
 
@@ -539,8 +546,8 @@ export default function App() {
         }
       });
 
-      // Ensure we have at least 3 rows in total, and at least 2 empty rows below the last filled row
-      const desiredLength = Math.max(3, lastFilledRowIdx + 3);
+      // Ensure we have at least 9 rows in total, and at least 4 empty rows below the last filled row
+      const desiredLength = Math.max(9, lastFilledRowIdx + 5);
       if (spelledRows.length < desiredLength) {
         setSpelledRows(prev => {
           const copy = prev.map(r => [...r]);
@@ -559,8 +566,8 @@ export default function App() {
         }
       });
 
-      // We want to keep all rows up to lastFilledRowIdx, plus exactly one trailing empty row
-      const targetLength = Math.max(1, lastFilledRowIdx + 2);
+      // We want to keep all rows up to lastFilledRowIdx, plus at least 4 empty rows, with a minimum of 6 rows in total
+      const targetLength = Math.max(6, lastFilledRowIdx + 4);
       
       if (spelledRows.length !== targetLength) {
         setSpelledRows(prev => {
@@ -632,6 +639,15 @@ export default function App() {
 
   // Measure all elements (source alphabets & spelling slots) to keep connection lines perfectly aligned!
   const updateElementPositions = useCallback(() => {
+    // Skip expensive DOM measurements during active drag-and-drop!
+    // This prevents layout thrashing, eliminates drag latency, and ensures 60fps/120fps smooth line tracking.
+    if (
+      draggedCubeRef.current !== null || 
+      draggedTrayIndexRef.current !== null || 
+      draggedShelfIndexRef.current !== null
+    ) {
+      return;
+    }
     const coords: Record<string, { x: number; y: number; width?: number; height?: number }> = {};
     
     // 1. Measure top grid cubes
@@ -1569,15 +1585,6 @@ export default function App() {
   };
 
   const handleRemoveRow = (rIdx: number) => {
-    if (spelledRows.length === 1) {
-      setSpelledRows([[]]);
-      setRowColors({});
-      setRowActiveModes({});
-      setCutWiresRows({});
-      setActiveRowIdx(0);
-      setRowIds(['row-initial-' + Math.random().toString(36).substring(2, 11)]);
-      return;
-    }
     setRowIds(prev => prev.filter((_, idx) => idx !== rIdx));
     setSpelledRows(prev => prev.filter((_, idx) => idx !== rIdx));
     setRowColors(prev => {
@@ -1616,7 +1623,15 @@ export default function App() {
       });
       return next;
     });
-    setActiveRowIdx(prev => Math.max(0, Math.min(prev, spelledRows.length - 2)));
+    setActiveRowIdx(prev => {
+      if (prev === rIdx) {
+        return Math.max(0, rIdx - 1);
+      }
+      if (prev > rIdx) {
+        return prev - 1;
+      }
+      return prev;
+    });
   };
 
   const handleDeleteRowWithHistory = (rIdx: number) => {
@@ -1766,12 +1781,19 @@ export default function App() {
       ]);
     }
 
-    setSpelledRows([[]]);
+    setSpelledRows([[], [], [], [], [], []]);
     setRowColors({});
     setRowActiveModes({});
     setCutWiresRows({});
     setActiveRowIdx(0);
-    setRowIds(['row-initial-' + Math.random().toString(36).substring(2, 11)]);
+    setRowIds([
+      'row-initial-1-' + Math.random().toString(36).substring(2, 11),
+      'row-initial-2-' + Math.random().toString(36).substring(2, 11),
+      'row-initial-3-' + Math.random().toString(36).substring(2, 11),
+      'row-initial-4-' + Math.random().toString(36).substring(2, 11),
+      'row-initial-5-' + Math.random().toString(36).substring(2, 11),
+      'row-initial-6-' + Math.random().toString(36).substring(2, 11)
+    ]);
   };
 
   const cycleRowColor = (rIdx: number) => {
@@ -2227,7 +2249,7 @@ export default function App() {
             {/* SINGLE BOARD CONTAINER (Original style matching the grey dashed card, growing internally) */}
             <motion.div 
               ref={boardRef}
-              className="w-full relative rounded-2xl border-2 border-dashed border-gray-200 bg-gray-50/50 p-4 sm:p-5 flex flex-col gap-5"
+              className="w-full relative rounded-2xl border-2 border-dashed border-gray-200 bg-gray-50/50 p-4 sm:p-5 flex flex-col gap-5 max-h-[460px] overflow-y-auto md:max-h-none"
             >
               
               <AnimatePresence mode="popLayout">
