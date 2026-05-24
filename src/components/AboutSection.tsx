@@ -293,7 +293,7 @@ export const AboutSection: React.FC<AboutSectionProps> = ({ onBack }) => {
     setTimeout(() => {
       setIsSending(false);
       setIsFormModalOpen(false);
-      const subject = encodeURIComponent(`Contato via: ABBA DIGITAL, nome: ${formValues.firstName} Sobrenome ${formValues.lastName} e whatsapp ${formValues.phone}`);
+      const subject = encodeURIComponent(`*Nome:* ${formValues.firstName}, *Sobrenome:* ${formValues.lastName}, *Whatsapp:* ${formValues.phone}`);
       const body = encodeURIComponent(formValues.message || '');
       window.open(`https://mail.google.com/mail/?view=cm&fs=1&to=projetobrasilbilingue@gmail.com&su=${subject}&body=${body}`, '_blank');
       setFormValues({ firstName: '', lastName: '', phone: '', message: '' });
@@ -358,7 +358,7 @@ export const AboutSection: React.FC<AboutSectionProps> = ({ onBack }) => {
     setTimeout(() => {
       setIsSending(false);
       setIsWhatsappModalOpen(false);
-      const contactText = `Contato via: ABBA DIGITAL\nNome: ${whatsappFormValues.firstName} Sobrenome: ${whatsappFormValues.lastName}\n\nMensagem:\n${whatsappFormValues.message}`;
+      const contactText = `*Nome:* ${whatsappFormValues.firstName}\n*Sobrenome:* ${whatsappFormValues.lastName}\n*Mensagem:* ${whatsappFormValues.message}`;
       const url = `https://wa.me/5547999034403?text=${encodeURIComponent(contactText)}`;
       window.open(url, '_blank');
       setWhatsappFormValues({ firstName: '', lastName: '', message: '' });
