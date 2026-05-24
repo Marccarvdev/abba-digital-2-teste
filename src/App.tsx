@@ -738,6 +738,61 @@ export default function App() {
     };
   }, [updateElementPositions]);
 
+  // Continuous smooth hardware-accelerated auto-scrolling loop during active drag-and-drop
+  useEffect(() => {
+    const isDragging = draggedCube !== null || draggedTrayIndex !== null || draggedShelfIndex !== null;
+    if (!isDragging) return;
+
+    let animFrameId: number;
+
+    const tick = () => {
+      const eX = dragLastMouseRef.current.x;
+      const eY = dragLastMouseRef.current.y;
+      if (eX === 0 && eY === 0) {
+        animFrameId = requestAnimationFrame(tick);
+        return;
+      }
+
+      // 1. Scroll the Board container vertically if dragging inside the board
+      if (boardRef.current) {
+        const boardRect = boardRef.current.getBoundingClientRect();
+        // Check horizontal bounds with 35px safety margin
+        if (eX >= boardRect.left - 35 && eX <= boardRect.right + 35) {
+          const bottomThreshold = boardRect.bottom - 75;
+          const topThreshold = boardRect.top + 75;
+
+          if (eY > bottomThreshold && eY < boardRect.bottom + 50) {
+            // Smoothly calculate scroll intensity based on proximity to bottom
+            const intensity = Math.min(16, Math.max(2, (eY - bottomThreshold) / 3));
+            boardRef.current.scrollBy({ top: intensity });
+          } else if (eY < topThreshold && eY > boardRect.top - 50) {
+            // Smoothly calculate scroll intensity based on proximity to top
+            const intensity = Math.min(16, Math.max(2, (topThreshold - eY) / 3));
+            boardRef.current.scrollBy({ top: -intensity });
+          }
+        }
+      }
+
+      // 2. Scroll the Window page vertically if dragging near viewport edges
+      const winHeight = window.innerHeight;
+      const winThreshold = 140;
+      if (eY < winThreshold) {
+        const winIntensity = Math.min(20, Math.max(3, (winThreshold - eY) / 2.5));
+        window.scrollBy({ top: -winIntensity });
+      } else if (eY > winHeight - winThreshold) {
+        const winIntensity = Math.min(20, Math.max(3, (eY - (winHeight - winThreshold)) / 2.5));
+        window.scrollBy({ top: winIntensity });
+      }
+
+      animFrameId = requestAnimationFrame(tick);
+    };
+
+    animFrameId = requestAnimationFrame(tick);
+    return () => {
+      cancelAnimationFrame(animFrameId);
+    };
+  }, [draggedCube, draggedTrayIndex, draggedShelfIndex]);
+
   // Siga fluidamente e instantaneamente o último bloco adicionado
   useEffect(() => {
     spelledRows.forEach((row, rIdx) => {
@@ -1015,31 +1070,7 @@ export default function App() {
       dragLastMouseRef.current = { x: e.clientX, y: e.clientY };
       dragLastTimeRef.current = now;
 
-      // Free scroll up/down while dragging replacing cubes
-      const isDragging = (draggedCubeRef.current !== null && draggedLetterRef.current !== null) || (draggedTrayIndexRef.current !== null && draggedBoardLetterRef.current !== null) || (draggedShelfIndexRef.current !== null);
-      if (isDragging) {
-        const threshold = 180;
-        let speed = 0;
-        if (e.clientY < threshold) {
-          speed = -Math.max(1, (threshold - e.clientY) / 3);
-        } else if (e.clientY > window.innerHeight - threshold) {
-          speed = Math.max(1, (e.clientY - (window.innerHeight - threshold)) / 3);
-        }
 
-        if (speed !== 0) {
-          // If we're dragging a shelf cube for reordering, restrict scroll trigger horizontal area to the container 
-          if (draggedShelfIndexRef.current !== null && shelfRef.current) {
-            const rect = shelfRef.current.getBoundingClientRect();
-            // Delimit scroll trigger ONLY to the horizontal bounds of the un-moved cubes grid
-            if (e.clientX >= rect.left - 20 && e.clientX <= rect.right + 20) {
-              window.scrollBy({ top: speed });
-            }
-          } else {
-            // General drag scrolling
-            window.scrollBy({ top: speed });
-          }
-        }
-      }
 
       if (draggedShelfIndexRef.current !== null) {
         // Just let it track pointerPos. Swap of elements in shelfCubes happens on pointerUp!
