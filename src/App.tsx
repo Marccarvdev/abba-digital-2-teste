@@ -3205,7 +3205,7 @@ export default function App() {
                 themeColor={themeColor}
               />
             ) : draggedTrayIndex !== null && draggedBoardLetter !== null ? (
-              <div className={`relative w-full h-full transition-all duration-200 ${isPointerInsideTray() ? 'opacity-100 scale-100' : 'opacity-40 scale-90'}`}>
+              <div className={`relative w-full h-full transition-[opacity,transform] duration-200 ${isPointerInsideTray() ? 'opacity-100 scale-100' : 'opacity-40 scale-90'}`}>
                 <LetterCube 
                   data={{
                     id: `floating-reorder-${draggedBoardLetter.id}`,
