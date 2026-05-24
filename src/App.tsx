@@ -2932,7 +2932,7 @@ export default function App() {
             }
 
             // Get live coordinates directly from the DOM to ensure 100% lag-free tracking during slide animations!
-            const startEl = document.getElementById(`cube-${letter.originCubeId}`);
+            const startEl = document.getElementById(letter.originCubeId);
             const endEl = document.getElementById(letter.id);
 
             if (!startEl || !endEl) return null;
