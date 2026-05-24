@@ -1,6 +1,8 @@
 import React, { SVGProps, useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Loader from './Loader';
+import styled from 'styled-components';
+
 
 // Custom icons to keep everything clean and self-contained
 const ArrowLeftIcon = (props: SVGProps<SVGSVGElement>) => (
@@ -134,6 +136,291 @@ const renderAbacusBlockSVG = (letter: string) => {
     </span>
   );
 };
+
+const StyledThemeSwitch = styled.div`
+  .switch {
+    position: relative;
+    display: inline-block;
+    width: 60px;
+    height: 34px;
+    scale: 0.85; /* Slightly scaled for modern proportions */
+  }
+
+  .switch #theme-toggle-input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+
+  .slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #2196f3;
+    -webkit-transition: 0.4s;
+    transition: 0.4s;
+    z-index: 0;
+    overflow: hidden;
+  }
+
+  .sun-moon {
+    position: absolute;
+    content: "";
+    height: 26px;
+    width: 26px;
+    left: 4px;
+    bottom: 4px;
+    background-color: yellow;
+    -webkit-transition: 0.4s;
+    transition: 0.4s;
+  }
+
+  #theme-toggle-input:checked + .slider {
+    background-color: black;
+  }
+
+  #theme-toggle-input:focus + .slider {
+    box-shadow: 0 0 1px #2196f3;
+  }
+
+  #theme-toggle-input:checked + .slider .sun-moon {
+    -webkit-transform: translateX(26px);
+    -ms-transform: translateX(26px);
+    transform: translateX(26px);
+    background-color: white;
+    -webkit-animation: rotate-center 0.6s ease-in-out both;
+    animation: rotate-center 0.6s ease-in-out both;
+  }
+
+  .moon-dot {
+    opacity: 0;
+    transition: 0.4s;
+    fill: gray;
+  }
+
+  #theme-toggle-input:checked + .slider .sun-moon .moon-dot {
+    opacity: 1;
+  }
+
+  .slider.round {
+    border-radius: 34px;
+  }
+
+  .slider.round .sun-moon {
+    border-radius: 50%;
+  }
+
+  #moon-dot-1 {
+    left: 10px;
+    top: 3px;
+    position: absolute;
+    width: 6px;
+    height: 6px;
+    z-index: 4;
+  }
+
+  #moon-dot-2 {
+    left: 2px;
+    top: 10px;
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    z-index: 4;
+  }
+
+  #moon-dot-3 {
+    left: 16px;
+    top: 18px;
+    position: absolute;
+    width: 3px;
+    height: 3px;
+    z-index: 4;
+  }
+
+  #light-ray-1 {
+    left: -8px;
+    top: -8px;
+    position: absolute;
+    width: 43px;
+    height: 43px;
+    z-index: -1;
+    fill: white;
+    opacity: 10%;
+  }
+
+  #light-ray-2 {
+    left: -50%;
+    top: -50%;
+    position: absolute;
+    width: 55px;
+    height: 55px;
+    z-index: -1;
+    fill: white;
+    opacity: 10%;
+  }
+
+  #light-ray-3 {
+    left: -18px;
+    top: -18px;
+    position: absolute;
+    width: 60px;
+    height: 60px;
+    z-index: -1;
+    fill: white;
+    opacity: 10%;
+  }
+
+  .cloud-light {
+    position: absolute;
+    fill: #eee;
+    animation-name: cloud-move;
+    animation-duration: 6s;
+    animation-iteration-count: infinite;
+  }
+
+  .cloud-dark {
+    position: absolute;
+    fill: #ccc;
+    animation-name: cloud-move;
+    animation-duration: 6s;
+    animation-iteration-count: infinite;
+    animation-delay: 1s;
+  }
+
+  #cloud-1 {
+    left: 30px;
+    top: 15px;
+    width: 40px;
+  }
+
+  #cloud-2 {
+    left: 44px;
+    top: 10px;
+    width: 20px;
+  }
+
+  #cloud-3 {
+    left: 18px;
+    top: 24px;
+    width: 30px;
+  }
+
+  #cloud-4 {
+    left: 36px;
+    top: 18px;
+    width: 40px;
+  }
+
+  #cloud-5 {
+    left: 48px;
+    top: 14px;
+    width: 20px;
+  }
+
+  #cloud-6 {
+    left: 22px;
+    top: 26px;
+    width: 30px;
+  }
+
+  @keyframes cloud-move {
+    0% {
+      transform: translateX(0px);
+    }
+
+    40% {
+      transform: translateX(4px);
+    }
+
+    80% {
+      transform: translateX(-4px);
+    }
+
+    100% {
+      transform: translateX(0px);
+    }
+  }
+
+  .stars {
+    transform: translateY(-32px);
+    opacity: 0;
+    transition: 0.4s;
+  }
+
+  .star {
+    fill: white;
+    position: absolute;
+    -webkit-transition: 0.4s;
+    transition: 0.4s;
+    animation-name: star-twinkle;
+    animation-duration: 2s;
+    animation-iteration-count: infinite;
+  }
+
+  #theme-toggle-input:checked + .slider .stars {
+    -webkit-transform: translateY(0);
+    -ms-transform: translateY(0);
+    transform: translateY(0);
+    opacity: 1;
+  }
+
+  #star-1 {
+    width: 20px;
+    top: 2px;
+    left: 3px;
+    animation-delay: 0.3s;
+  }
+
+  #star-2 {
+    width: 6px;
+    top: 16px;
+    left: 3px;
+  }
+
+  #star-3 {
+    width: 12px;
+    top: 20px;
+    left: 10px;
+    animation-delay: 0.6s;
+  }
+
+  #star-4 {
+    width: 18px;
+    top: 0px;
+    left: 18px;
+    animation-delay: 1.3s;
+  }
+
+  @keyframes star-twinkle {
+    0% {
+      transform: scale(1);
+    }
+
+    40% {
+      transform: scale(1.2);
+    }
+
+    80% {
+      transform: scale(0.8);
+    }
+
+    100% {
+      transform: scale(1);
+    }
+  }
+
+  @keyframes rotate-center {
+    0% {
+      transform: translateX(26px) rotate(0deg);
+    }
+    100% {
+      transform: translateX(26px) rotate(360deg);
+    }
+  }
+`;
 
 interface AboutSectionProps {
   onBack: () => void;
@@ -669,59 +956,75 @@ export const AboutSection: React.FC<AboutSectionProps> = ({ onBack }) => {
 
           {/* Right side: Fluid & Modern Theme Switcher (opposing the logo on the right side) */}
           <div 
-            className={`flex items-center gap-2 select-none shrink-0 transition-opacity duration-300 ${
+            className={`flex items-center select-none shrink-0 transition-opacity duration-300 ${
               isExiting ? 'opacity-0' : 'opacity-100'
             }`}
           >
-          <span className={`hidden sm:inline text-[10px] font-mono font-extrabold tracking-widest uppercase transition-colors duration-305 ${
-            theme === 'dark' ? 'text-slate-400' : 'text-gray-505'
-          }`}>
-            TEMA
-          </span>
-
-          {/* Fluid capsule container switcher */}
-          <div className={`p-1 rounded-full flex items-center relative gap-1 border transition-all duration-300 w-[72px] h-9 ${
-            theme === 'dark' 
-              ? 'bg-slate-900 border-slate-800' 
-              : 'bg-gray-100 border-gray-250/70'
-          }`}>
-            {/* Sliding backdrop capsule with spring animation style */}
-            <motion.div 
-              layout
-              transition={{ type: "spring", stiffness: 350, damping: 26 }}
-              className="absolute w-7 h-7 rounded-full bg-[#005ba4] shadow-sm"
-              style={{
-                left: theme === 'light' ? '4px' : '36px',
-              }}
-            />
-
-            {/* Light Mode Switch Target */}
-            <button
-              onClick={() => setTheme('light')}
-              className={`w-7 h-7 rounded-full flex items-center justify-center relative z-10 transition-colors duration-300 cursor-pointer ${
-                theme === 'light' ? 'text-white' : 'text-slate-455 hover:text-slate-700'
-              }`}
-              title="Tema Claro"
-            >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707m12.728 0l-.707-.707M6.343 6.343l-.707-.707M12 7a5 5 0 100 10 5 5 0 000-10z" />
-              </svg>
-            </button>
-
-            {/* Dark Mode Switch Target */}
-            <button
-              onClick={() => setTheme('dark')}
-              className={`w-7 h-7 rounded-full flex items-center justify-center relative z-10 transition-colors duration-300 cursor-pointer ${
-                theme === 'dark' ? 'text-white' : 'text-slate-550 hover:text-slate-200'
-              }`}
-              title="Tema Escuro"
-            >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
-              </svg>
-            </button>
+            <StyledThemeSwitch>
+              <label className="switch" title="Alternar Tema (Claro / Escuro)">
+                <input 
+                  id="theme-toggle-input" 
+                  type="checkbox" 
+                  checked={theme === 'dark'}
+                  onChange={(e) => setTheme(e.target.checked ? 'dark' : 'light')} 
+                />
+                <div className="slider round">
+                  <div className="sun-moon">
+                    <svg id="moon-dot-1" className="moon-dot" viewBox="0 0 100 100">
+                      <circle cx={50} cy={50} r={50} />
+                    </svg>
+                    <svg id="moon-dot-2" className="moon-dot" viewBox="0 0 100 100">
+                      <circle cx={50} cy={50} r={50} />
+                    </svg>
+                    <svg id="moon-dot-3" className="moon-dot" viewBox="0 0 100 100">
+                      <circle cx={50} cy={50} r={50} />
+                    </svg>
+                    <svg id="light-ray-1" className="light-ray" viewBox="0 0 100 100">
+                      <circle cx={50} cy={50} r={50} />
+                    </svg>
+                    <svg id="light-ray-2" className="light-ray" viewBox="0 0 100 100">
+                      <circle cx={50} cy={50} r={50} />
+                    </svg>
+                    <svg id="light-ray-3" className="light-ray" viewBox="0 0 100 100">
+                      <circle cx={50} cy={50} r={50} />
+                    </svg>
+                    <svg id="cloud-1" className="cloud-dark" viewBox="0 0 100 100">
+                      <circle cx={50} cy={50} r={50} />
+                    </svg>
+                    <svg id="cloud-2" className="cloud-dark" viewBox="0 0 100 100">
+                      <circle cx={50} cy={50} r={50} />
+                    </svg>
+                    <svg id="cloud-3" className="cloud-dark" viewBox="0 0 100 100">
+                      <circle cx={50} cy={50} r={50} />
+                    </svg>
+                    <svg id="cloud-4" className="cloud-light" viewBox="0 0 100 100">
+                      <circle cx={50} cy={50} r={50} />
+                    </svg>
+                    <svg id="cloud-5" className="cloud-light" viewBox="0 0 100 100">
+                      <circle cx={50} cy={50} r={50} />
+                    </svg>
+                    <svg id="cloud-6" className="cloud-light" viewBox="0 0 100 100">
+                      <circle cx={50} cy={50} r={50} />
+                    </svg>
+                  </div>
+                  <div className="stars">
+                    <svg id="star-1" className="star" viewBox="0 0 20 20">
+                      <path d="M 0 10 C 10 10,10 10 ,0 10 C 10 10 , 10 10 , 10 20 C 10 10 , 10 10 , 20 10 C 10 10 , 10 10 , 10 0 C 10 10,10 10 ,0 10 Z" />
+                    </svg>
+                    <svg id="star-2" className="star" viewBox="0 0 20 20">
+                      <path d="M 0 10 C 10 10,10 10 ,0 10 C 10 10 , 10 10 , 10 20 C 10 10 , 10 10 , 20 10 C 10 10 , 10 10 , 10 0 C 10 10,10 10 ,0 10 Z" />
+                    </svg>
+                    <svg id="star-3" className="star" viewBox="0 0 20 20">
+                      <path d="M 0 10 C 10 10,10 10 ,0 10 C 10 10 , 10 10 , 10 20 C 10 10 , 10 10 , 20 10 C 10 10 , 10 10 , 10 0 C 10 10,10 10 ,0 10 Z" />
+                    </svg>
+                    <svg id="star-4" className="star" viewBox="0 0 20 20">
+                      <path d="M 0 10 C 10 10,10 10 ,0 10 C 10 10 , 10 10 , 10 20 C 10 10 , 10 10 , 20 10 C 10 10 , 10 10 , 10 0 C 10 10,10 10 ,0 10 Z" />
+                    </svg>
+                  </div>
+                </div>
+              </label>
+            </StyledThemeSwitch>
           </div>
-        </div>
         </div>
       </div>
 
