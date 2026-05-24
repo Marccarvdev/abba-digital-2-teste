@@ -154,17 +154,23 @@ export const AboutSection: React.FC<AboutSectionProps> = ({ onBack }) => {
     'porra', 'caralho', 'puta', 'viado', 'fdp', 'corno', 'bosta', 'merda', 'otario', 'otário',
     'imbecil', 'idiota', 'retardado', 'lixo', 'babaca', 'burro', 'estupido', 'estúpido',
     'cu', 'cuzao', 'cuzão', 'asshole', 'bitch', 'shit', 'fuck', 'paspalho', 'arrombado', 'desgraçado',
-    'chupador', 'vagabundo', 'canalha', 'safado', 'cretino', 'escroto', 'fedorento', 'corrupto'
+    'chupador', 'vagabundo', 'canalha', 'safado', 'cretino', 'escroto', 'fedorento', 'corrupto',
+    'pinto', 'bunda', 'crl', 'vtnc', 'tnc', 'pqp', 'caralha', 'caralhao', 'caralhão', 'fodase', 'foda-se',
+    'piroca', 'cacete', 'xereca', 'xota', 'buceta', 'pica', 'rola', 'boquete', 'punheta', 'bicha', 'viadinho'
   ];
 
   const hasOffensiveTerms = (text: string): boolean => {
+    if (!text) return false;
     const normalized = text.toLowerCase()
       .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, ""); // strip accents for check
+      .replace(/[\u0300-\u036f]/g, "") // strip accents
+      .replace(/\s+/g, ""); // strip all spaces to handle spaces bypasses (e.g. "p i n t o")
+      
     return OFFENSIVE_WORDS.some(word => {
-      const wordNormalized = word.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-      const regex = new RegExp(`\\b${wordNormalized}\\b|${wordNormalized}`, 'i');
-      return regex.test(normalized);
+      const wordNormalized = word.normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/\s+/g, "");
+      return normalized.includes(wordNormalized);
     });
   };
 
