@@ -151,12 +151,13 @@ export const AboutSection: React.FC<AboutSectionProps> = ({ onBack }) => {
   const [isRespectModalOpen, setIsRespectModalOpen] = useState(false);
 
   const OFFENSIVE_WORDS = [
-    'porra', 'caralho', 'puta', 'viado', 'fdp', 'corno', 'bosta', 'merda', 'otario', 'otário',
+    'porra', 'caralho', 'puta', 'viado', 'viido', 'vido', 'viad', 'fdp', 'corno', 'bosta', 'merda', 'otario', 'otário',
     'imbecil', 'idiota', 'retardado', 'lixo', 'babaca', 'burro', 'estupido', 'estúpido',
     'cu', 'cuzao', 'cuzão', 'asshole', 'bitch', 'shit', 'fuck', 'paspalho', 'arrombado', 'desgraçado',
     'chupador', 'vagabundo', 'canalha', 'safado', 'cretino', 'escroto', 'fedorento', 'corrupto',
     'pinto', 'bunda', 'crl', 'vtnc', 'tnc', 'pqp', 'caralha', 'caralhao', 'caralhão', 'fodase', 'foda-se',
-    'piroca', 'cacete', 'xereca', 'xota', 'buceta', 'pica', 'rola', 'boquete', 'punheta', 'bicha', 'viadinho'
+    'piroca', 'cacete', 'xereca', 'xota', 'buceta', 'pica', 'rola', 'boquete', 'punheta', 'bicha', 'viadinho',
+    'crleo', 'caraleo', 'caralho', 'bct', 'crlh', 'krlh', 'filhodaputa', 'putaria', 'cuzao', 'fodido'
   ];
 
   const hasOffensiveTerms = (text: string): boolean => {
@@ -164,12 +165,29 @@ export const AboutSection: React.FC<AboutSectionProps> = ({ onBack }) => {
     const normalized = text.toLowerCase()
       .normalize("NFD")
       .replace(/[\u0300-\u036f]/g, "") // strip accents
-      .replace(/\s+/g, ""); // strip all spaces to handle spaces bypasses (e.g. "p i n t o")
+      // Leetspeak / bypasses translation
+      .replace(/4|@/g, "a")
+      .replace(/3|&/g, "e")
+      .replace(/1|!|%|\|/g, "i")
+      .replace(/0|\*/g, "o")
+      .replace(/5|\$/g, "s")
+      .replace(/7/g, "t")
+      .replace(/k/g, "c") // treat 'k' as 'c' (e.g. krl -> crl)
+      .replace(/\s+/g, "") // strip all spaces
+      .replace(/[^a-z]/g, ""); // strip all other symbols (e.g. @, %, *, _)
       
     return OFFENSIVE_WORDS.some(word => {
       const wordNormalized = word.normalize("NFD")
         .replace(/[\u0300-\u036f]/g, "")
-        .replace(/\s+/g, "");
+        .replace(/4|@/g, "a")
+        .replace(/3|&/g, "e")
+        .replace(/1|!|%|\|/g, "i")
+        .replace(/0|\*/g, "o")
+        .replace(/5|\$/g, "s")
+        .replace(/7/g, "t")
+        .replace(/k/g, "c")
+        .replace(/\s+/g, "")
+        .replace(/[^a-z]/g, "");
       return normalized.includes(wordNormalized);
     });
   };
