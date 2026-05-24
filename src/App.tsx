@@ -1403,8 +1403,8 @@ export default function App() {
           const now = Date.now();
           const lastTime = lastClicksRef.current[letterId] || 0;
 
-          if (now - lastTime < 450) {
-            // Double click: remove letter, no color cycle
+          if (now - lastTime < 350) {
+            // Double click: remove letter
             if (clickTimeoutsRef.current[letterId]) {
               clearTimeout(clickTimeoutsRef.current[letterId]);
               delete clickTimeoutsRef.current[letterId];
@@ -1433,13 +1433,9 @@ export default function App() {
             });
             delete lastClicksRef.current[letterId];
           } else {
-            // Single click: wait to see if it becomes a double click before cycling color
+            // Single click: cycle color instantly!
+            cycleRowColor(startRef.rowIdx);
             lastClicksRef.current[letterId] = now;
-            clickTimeoutsRef.current[letterId] = setTimeout(() => {
-              cycleRowColor(startRef.rowIdx);
-              delete clickTimeoutsRef.current[letterId];
-              delete lastClicksRef.current[letterId];
-            }, 300);
           }
         }
       }
