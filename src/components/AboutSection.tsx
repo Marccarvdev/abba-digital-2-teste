@@ -426,6 +426,18 @@ interface AboutSectionProps {
   onBack: () => void;
 }
 
+const SECTIONS = [
+  { id: 'o-que-e-o-abba', label: 'O que é o ABBA' },
+  { id: 'como-funciona', label: 'Como funciona' },
+  { id: 'objetivo-das-tarefas', label: 'Objetivo das Tarefas' },
+  { id: 'teoria-alencarina', label: 'Teoria Alencarina' },
+  { id: 'simbolo-linguistico', label: 'Símbolo Linguístico' },
+  { id: 'metas-do-projeto', label: 'Metas do Projeto' },
+  { id: 'fundamentacao-logica', label: 'Fundamentação Lógica' },
+  { id: 'problema-e-diferencial', label: 'Problema & Diferencial' },
+  { id: 'como-nasceu-o-projeto', label: 'Como Nasceu o Projeto' }
+];
+
 export const AboutSection: React.FC<AboutSectionProps> = ({ onBack }) => {
   const [activeGroup, setActiveGroup] = useState<string | null>(null);
   const [activeGroupIndex, setActiveGroupIndex] = useState<number>(0);
@@ -436,6 +448,7 @@ export const AboutSection: React.FC<AboutSectionProps> = ({ onBack }) => {
   const [isSending, setIsSending] = useState(false);
   const [isExiting, setIsExiting] = useState(false);
   const [isRespectModalOpen, setIsRespectModalOpen] = useState(false);
+  const [activeSection, setActiveSection] = useState('o-que-e-o-abba');
 
   const OFFENSIVE_WORDS = [
     'porra', 'caralho', 'puta', 'viado', 'viido', 'vido', 'viad', 'fdp', 'corno', 'bosta', 'merda', 'otario', 'otário',
@@ -751,6 +764,41 @@ export const AboutSection: React.FC<AboutSectionProps> = ({ onBack }) => {
     };
   }, [activeGroup]);
 
+  // Intersection Observer for highlighting current reading section dynamically
+  useEffect(() => {
+    const observerOptions = {
+      root: null,
+      rootMargin: '-15% 0px -55% 0px',
+      threshold: 0
+    };
+
+    const handleIntersection = (entries: IntersectionObserverEntry[]) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          setActiveSection(entry.target.id);
+        }
+      });
+    };
+
+    const observer = new IntersectionObserver(handleIntersection, observerOptions);
+
+    SECTIONS.forEach(sec => {
+      const el = document.getElementById(sec.id);
+      if (el) observer.observe(el);
+    });
+
+    return () => {
+      observer.disconnect();
+    };
+  }, []);
+
+  const scrollToSection = (id: string) => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
+
   // Proactive preloader for high performance loading
   useEffect(() => {
     if (activeGroup && GALLERY_GROUPS[activeGroup]) {
@@ -1028,19 +1076,75 @@ export const AboutSection: React.FC<AboutSectionProps> = ({ onBack }) => {
         </div>
       </div>
 
-      {/* Main post body container */}
-      <article 
-        className={`max-w-4xl mx-auto px-5 sm:px-6 md:px-8 pt-8 sm:pt-12 flex flex-col text-left transition-opacity duration-300 ease-in-out ${
+      {/* Article Navigation & Body Grid */}
+      <div 
+        className={`max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 sm:pt-12 flex flex-col lg:flex-row gap-12 transition-opacity duration-300 ease-in-out ${
           isExiting ? 'opacity-0' : 'opacity-100'
         }`}
       >
+        
+        {/* Sticky Table of Contents (Desktop Only) */}
+        <aside className="hidden lg:block w-60 shrink-0 sticky top-24 self-start max-h-[calc(100vh-8rem)] overflow-y-auto pr-2 no-scrollbar">
+          <div className={`p-6 rounded-2xl border transition-colors duration-300 ${
+            theme === 'dark' ? 'bg-slate-950/40 border-slate-800' : 'bg-slate-50/50 border-gray-150 shadow-xs'
+          }`}>
+            <h3 className={`font-display font-extrabold text-[10px] uppercase tracking-widest mb-4 transition-colors duration-300 ${
+              theme === 'dark' ? 'text-white' : 'text-slate-900'
+            }`}>
+              Sumário
+            </h3>
+            <ul className="space-y-3 font-sans text-xs">
+              {SECTIONS.map((sec) => (
+                <li key={sec.id}>
+                  <button
+                    onClick={() => scrollToSection(sec.id)}
+                    className={`text-left w-full hover:underline transition-all font-medium border-none bg-transparent cursor-pointer py-1.5 block leading-relaxed relative pl-3.5 ${
+                      activeSection === sec.id
+                        ? (theme === 'dark' ? 'text-sky-400 font-bold' : 'text-[#005ba4] font-bold')
+                        : (theme === 'dark' ? 'text-slate-400 hover:text-white' : 'text-slate-500 hover:text-slate-900')
+                    }`}
+                  >
+                    {activeSection === sec.id && (
+                      <span className={`absolute left-0 top-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full ${
+                        theme === 'dark' ? 'bg-sky-400' : 'bg-[#005ba4]'
+                      }`} />
+                    )}
+                    {sec.label}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </aside>
+
+        {/* Main Article Area */}
+        <article className="flex-1 min-w-0 flex flex-col text-left">
+          
+          {/* Sticky Horizontal Pill Scroller (Mobile Only) */}
+          <div className={`lg:hidden sticky top-16 z-40 py-3 -mx-5 sm:-mx-6 px-5 sm:px-6 border-b transition-colors duration-300 overflow-x-auto no-scrollbar flex gap-2 shrink-0 backdrop-blur-md ${
+            theme === 'dark' ? 'bg-[#00000f]/90 border-slate-800' : 'bg-white/90 border-gray-100'
+          }`}>
+            {SECTIONS.map((sec) => (
+              <button
+                key={sec.id}
+                onClick={() => scrollToSection(sec.id)}
+                className={`px-3.5 py-1.5 rounded-full text-[11px] font-bold whitespace-nowrap cursor-pointer transition-all border shrink-0 ${
+                  activeSection === sec.id
+                    ? (theme === 'dark' ? 'bg-sky-400 text-black border-sky-400 font-extrabold shadow-sm' : 'bg-[#005ba4] text-white border-[#005ba4] font-extrabold shadow-sm')
+                    : (theme === 'dark' ? 'bg-slate-900/40 text-slate-300 border-slate-800/80' : 'bg-slate-100/80 text-slate-600 border-slate-200/60')
+                }`}
+              >
+                {sec.label}
+              </button>
+            ))}
+          </div>
             
-            {/* Big Editorial Title */}
-        <h1 className={`font-display font-black text-3xl sm:text-4xl md:text-5xl tracking-tight leading-[1.08] mb-4 transition-colors duration-300 ${
-          theme === 'dark' ? 'text-white' : 'text-gray-900'
-        }`}>
-          ABBA — Ábaco Brasileiro de Alfabetização Bilíngue
-        </h1>
+          {/* Big Editorial Title */}
+          <h1 className={`font-display font-black text-3xl sm:text-4xl md:text-5xl tracking-tight leading-[1.08] mb-4 transition-colors duration-300 ${
+            theme === 'dark' ? 'text-white' : 'text-gray-900'
+          }`}>
+            ABBA — Ábaco Brasileiro de Alfabetização Bilíngue
+          </h1>
 
         {/* Author details card matching Perplexity layout */}
         <div className={`flex flex-wrap items-center gap-x-4 gap-y-3 py-4 border-y mb-8 max-w-full transition-colors duration-300 ${
@@ -1093,7 +1197,7 @@ export const AboutSection: React.FC<AboutSectionProps> = ({ onBack }) => {
         </p>
 
         {/* SECTION: O que é o ABBA */}
-        <section className="mb-10">
+        <section id="o-que-e-o-abba" className="mb-10">
           <h2 className={`font-display font-extrabold text-xl sm:text-2xl tracking-tight mb-3 transition-colors duration-300 ${
             theme === 'dark' ? 'text-white' : 'text-gray-900'
           }`}>
@@ -1164,7 +1268,7 @@ export const AboutSection: React.FC<AboutSectionProps> = ({ onBack }) => {
         </section>
 
         {/* SECTION: Como funciona */}
-        <section className="mb-10">
+        <section id="como-funciona" className="mb-10">
           <h2 className={`font-display font-extrabold text-xl sm:text-2xl tracking-tight mb-3 transition-colors duration-300 ${
             theme === 'dark' ? 'text-white' : 'text-gray-900'
           }`}>
@@ -1192,7 +1296,7 @@ export const AboutSection: React.FC<AboutSectionProps> = ({ onBack }) => {
         </section>
 
         {/* SECTION: Objetivo das tarefas */}
-        <section className="mb-10">
+        <section id="objetivo-das-tarefas" className="mb-10">
           <h2 className={`font-display font-extrabold text-xl sm:text-2xl tracking-tight mb-3 transition-colors duration-300 ${
             theme === 'dark' ? 'text-white' : 'text-gray-900'
           }`}>
@@ -1215,7 +1319,7 @@ export const AboutSection: React.FC<AboutSectionProps> = ({ onBack }) => {
         </section>
 
          {/* SECTION: Teoria Alencarina */}
-        <section className="mb-10">
+        <section id="teoria-alencarina" className="mb-10">
           <h2 className={`font-display font-extrabold text-xl sm:text-2xl tracking-tight mb-3 transition-colors duration-300 ${
             theme === 'dark' ? 'text-white' : 'text-gray-900'
           }`}>
@@ -1241,7 +1345,7 @@ export const AboutSection: React.FC<AboutSectionProps> = ({ onBack }) => {
         </section>
 
         {/* SECTION: Conceito de símbolo linguístico */}
-        <section className="mb-10">
+        <section id="simbolo-linguistico" className="mb-10">
           <h2 className={`font-display font-extrabold text-xl sm:text-2xl tracking-tight mb-3 transition-colors duration-300 ${
             theme === 'dark' ? 'text-white' : 'text-gray-900'
           }`}>
@@ -1279,7 +1383,7 @@ export const AboutSection: React.FC<AboutSectionProps> = ({ onBack }) => {
         </section>
 
         {/* SECTION: Meta inicial e final */}
-        <section className="mb-10">
+        <section id="metas-do-projeto" className="mb-10">
           <h2 className={`font-display font-extrabold text-xl sm:text-2xl tracking-tight mb-3 transition-colors duration-305 ${
             theme === 'dark' ? 'text-white' : 'text-gray-900'
           }`}>
@@ -1314,7 +1418,7 @@ export const AboutSection: React.FC<AboutSectionProps> = ({ onBack }) => {
         </section>
 
         {/* SECTION: Fundamentação lógica */}
-        <section className="mb-10">
+        <section id="fundamentacao-logica" className="mb-10">
           <h2 className={`font-display font-extrabold text-xl sm:text-2xl tracking-tight mb-3 transition-colors duration-300 ${
             theme === 'dark' ? 'text-white' : 'text-gray-900'
           }`}>
@@ -1330,7 +1434,7 @@ export const AboutSection: React.FC<AboutSectionProps> = ({ onBack }) => {
         </section>
 
         {/* SECTION: Problema que resolve / Diferencial / vantagem */}
-        <section className={`mb-10 p-6 rounded-3xl space-y-6 transition-colors duration-300 ${
+        <section id="problema-e-diferencial" className={`mb-10 p-6 rounded-3xl space-y-6 transition-colors duration-300 ${
           theme === 'dark' 
             ? 'bg-slate-900/40 border border-slate-800' 
             : 'bg-slate-50 border border-slate-150'
@@ -1373,7 +1477,7 @@ export const AboutSection: React.FC<AboutSectionProps> = ({ onBack }) => {
         </section>
 
         {/* SECTION: Geração do insight */}
-        <section className="mb-10">
+        <section id="como-nasceu-o-projeto" className="mb-10">
           <h2 className={`font-display font-extrabold text-xl sm:text-2xl tracking-tight mb-3 transition-colors duration-300 ${
             theme === 'dark' ? 'text-white' : 'text-gray-900'
           }`}>
@@ -1444,6 +1548,7 @@ export const AboutSection: React.FC<AboutSectionProps> = ({ onBack }) => {
           </p>
         </div>
       </article>
+    </div>
 
       {/* Immersive fluid image gallery overlay */}
       <AnimatePresence>
