@@ -108,7 +108,7 @@ const Undo2: React.FC<SVGProps<SVGSVGElement>> = (props) => (
   </svg>
 );
 
-import { ALPHABET_CUBES } from './alphabetData.ts';
+import { ALPHABET_CUBES } from './data';
 import { LetterCube } from './components/LetterCube';
 import { SpelledLetter, LetterCubeData, SavedWord, User, TaskItem, StudentSubmission } from './types';
 import { AboutSection } from './components/AboutSection';

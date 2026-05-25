@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { User, TaskItem, SavedWord } from '../types';
 import abbaLogo from '../assets/logo abba.svg';
-import { cardImageBase64 } from '../data/cardBase64';
+import { cardImageBase64 } from '../base64Data/cardBase64';
 import Loader from './Loader';
 
 
