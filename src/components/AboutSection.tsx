@@ -426,21 +426,11 @@ interface AboutSectionProps {
   onBack: () => void;
 }
 
-const SECTIONS = [
-  { id: 'o-que-e-o-abba', label: 'O que é o ABBA' },
-  { id: 'como-funciona', label: 'Como funciona' },
-  { id: 'objetivo-das-tarefas', label: 'Objetivo das Tarefas' },
-  { id: 'teoria-alencarina', label: 'Teoria Alencarina' },
-  { id: 'simbolo-linguistico', label: 'Símbolo Linguístico' },
-  { id: 'metas-do-projeto', label: 'Metas do Projeto' },
-  { id: 'fundamentacao-logica', label: 'Fundamentação Lógica' },
-  { id: 'problema-e-diferencial', label: 'Problema & Diferencial' },
-  { id: 'como-nasceu-o-projeto', label: 'Como Nasceu o Projeto' }
-];
 
 export const AboutSection: React.FC<AboutSectionProps> = ({ onBack }) => {
   const [activeGroup, setActiveGroup] = useState<string | null>(null);
   const [activeGroupIndex, setActiveGroupIndex] = useState<number>(0);
+  const containerRef = React.useRef<HTMLDivElement>(null);
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
   const [fullScreenImage, setFullScreenImage] = useState<string | null>(null);
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
@@ -448,7 +438,6 @@ export const AboutSection: React.FC<AboutSectionProps> = ({ onBack }) => {
   const [isSending, setIsSending] = useState(false);
   const [isExiting, setIsExiting] = useState(false);
   const [isRespectModalOpen, setIsRespectModalOpen] = useState(false);
-  const [activeSection, setActiveSection] = useState('o-que-e-o-abba');
 
   const OFFENSIVE_WORDS = [
     'porra', 'caralho', 'puta', 'viado', 'viido', 'vido', 'viad', 'fdp', 'corno', 'bosta', 'merda', 'otario', 'otário',
@@ -754,50 +743,24 @@ export const AboutSection: React.FC<AboutSectionProps> = ({ onBack }) => {
 
   // Prevent background scrolling while the modal gallery is active
   useEffect(() => {
+    const el = containerRef.current;
     if (activeGroup !== null) {
       document.body.style.overflow = 'hidden';
+      if (el) el.style.overflowY = 'hidden';
     } else {
       document.body.style.overflow = '';
+      if (el) el.style.overflowY = 'auto';
     }
     return () => {
       document.body.style.overflow = '';
+      if (el) el.style.overflowY = 'auto';
     };
   }, [activeGroup]);
 
   // Intersection Observer for highlighting current reading section dynamically
-  useEffect(() => {
-    const observerOptions = {
-      root: null,
-      rootMargin: '-15% 0px -55% 0px',
-      threshold: 0
-    };
+  
 
-    const handleIntersection = (entries: IntersectionObserverEntry[]) => {
-      entries.forEach(entry => {
-        if (entry.isIntersecting) {
-          setActiveSection(entry.target.id);
-        }
-      });
-    };
-
-    const observer = new IntersectionObserver(handleIntersection, observerOptions);
-
-    SECTIONS.forEach(sec => {
-      const el = document.getElementById(sec.id);
-      if (el) observer.observe(el);
-    });
-
-    return () => {
-      observer.disconnect();
-    };
-  }, []);
-
-  const scrollToSection = (id: string) => {
-    const el = document.getElementById(id);
-    if (el) {
-      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
-  };
+  
 
   // Proactive preloader for high performance loading
   useEffect(() => {
@@ -910,6 +873,7 @@ export const AboutSection: React.FC<AboutSectionProps> = ({ onBack }) => {
 
   return (
     <motion.div 
+      ref={containerRef}
       initial={{ opacity: 0, x: 15 }}
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: -15 }}
@@ -992,13 +956,7 @@ export const AboutSection: React.FC<AboutSectionProps> = ({ onBack }) => {
               }`}>
                 ABBA DIGITAL
               </h1>
-              <p className={`text-[10px] font-medium transition-colors duration-500 relative flex items-center h-[15px] ${
-                theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
-              }`}>
-                  <span className={`absolute left-0 whitespace-nowrap transition-opacity duration-500 ${isExiting ? 'opacity-0' : 'opacity-100'}`}>Artigo Científico</span>
-                  <span className={`absolute left-0 whitespace-nowrap transition-opacity duration-500 ${isExiting ? 'opacity-100' : 'opacity-0'}`}>Ábaco Brasileiro de Alfabetização Bilíngue</span>
-                  <span className="opacity-0 pointer-events-none whitespace-nowrap">Ábaco Brasileiro de Alfabetização Bilíngue</span>
-              </p>
+             
             </div>
           </div>
 
@@ -1083,471 +1041,183 @@ export const AboutSection: React.FC<AboutSectionProps> = ({ onBack }) => {
         }`}
       >
         
-        {/* Sticky Table of Contents (Desktop Only) */}
-        <aside className="hidden lg:block w-60 shrink-0 sticky top-24 self-start max-h-[calc(100vh-8rem)] overflow-y-auto pr-2 no-scrollbar">
-          <div className={`p-6 rounded-2xl border transition-colors duration-300 ${
-            theme === 'dark' ? 'bg-slate-950/40 border-slate-800' : 'bg-slate-50/50 border-gray-150 shadow-xs'
-          }`}>
-            <h3 className={`font-display font-extrabold text-[10px] uppercase tracking-widest mb-4 transition-colors duration-300 ${
-              theme === 'dark' ? 'text-white' : 'text-slate-900'
-            }`}>
-              Sumário
-            </h3>
-            <ul className="space-y-3 font-sans text-xs">
-              {SECTIONS.map((sec) => (
-                <li key={sec.id}>
-                  <button
-                    onClick={() => scrollToSection(sec.id)}
-                    className={`text-left w-full hover:underline transition-all font-medium border-none bg-transparent cursor-pointer py-1.5 block leading-relaxed relative pl-3.5 ${
-                      activeSection === sec.id
-                        ? (theme === 'dark' ? 'text-sky-400 font-bold' : 'text-[#005ba4] font-bold')
-                        : (theme === 'dark' ? 'text-slate-400 hover:text-white' : 'text-slate-500 hover:text-slate-900')
-                    }`}
-                  >
-                    {activeSection === sec.id && (
-                      <span className={`absolute left-0 top-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full ${
-                        theme === 'dark' ? 'bg-sky-400' : 'bg-[#005ba4]'
-                      }`} />
-                    )}
-                    {sec.label}
-                  </button>
-                </li>
-              ))}
-            </ul>
-          </div>
-        </aside>
+      
 
         {/* Main Article Area */}
         <article className="flex-1 min-w-0 flex flex-col text-left">
           
-          {/* Sticky Horizontal Pill Scroller (Mobile Only) */}
-          <div className={`lg:hidden sticky top-16 z-40 py-3 -mx-5 sm:-mx-6 px-5 sm:px-6 border-b transition-colors duration-300 overflow-x-auto no-scrollbar flex gap-2 shrink-0 backdrop-blur-md ${
-            theme === 'dark' ? 'bg-[#00000f]/90 border-slate-800' : 'bg-white/90 border-gray-100'
-          }`}>
-            {SECTIONS.map((sec) => (
-              <button
-                key={sec.id}
-                onClick={() => scrollToSection(sec.id)}
-                className={`px-3.5 py-1.5 rounded-full text-[11px] font-bold whitespace-nowrap cursor-pointer transition-all border shrink-0 ${
-                  activeSection === sec.id
-                    ? (theme === 'dark' ? 'bg-sky-400 text-black border-sky-400 font-extrabold shadow-sm' : 'bg-[#005ba4] text-white border-[#005ba4] font-extrabold shadow-sm')
-                    : (theme === 'dark' ? 'bg-slate-900/40 text-slate-300 border-slate-800/80' : 'bg-slate-100/80 text-slate-600 border-slate-200/60')
-                }`}
-              >
-                {sec.label}
-              </button>
-            ))}
-          </div>
+          {/* Título Principal no estilo Editorial Clean do GitHub */}
+          <header className={`mb-12 border-b pb-8 ${theme === 'dark' ? 'border-slate-800' : 'border-gray-100'}`}>
+            <h1 className={`font-display font-black text-3xl sm:text-4xl md:text-5xl tracking-tight leading-[1.05] mb-4 uppercase ${
+              theme === 'dark' ? 'text-white' : 'text-slate-950'
+            }`}>
+              Ábaco Brasileiro de Alfabetização Bilíngue (ABBA)
+            </h1>
             
-          {/* Big Editorial Title */}
-          <h1 className={`font-display font-black text-3xl sm:text-4xl md:text-5xl tracking-tight leading-[1.08] mb-4 transition-colors duration-300 ${
-            theme === 'dark' ? 'text-white' : 'text-gray-900'
-          }`}>
-            ABBA — Ábaco Brasileiro de Alfabetização Bilíngue
-          </h1>
-
-        {/* Author details card matching Perplexity layout */}
-        <div className={`flex flex-wrap items-center gap-x-4 gap-y-3 py-4 border-y mb-8 max-w-full transition-colors duration-300 ${
-          theme === 'dark' ? 'border-slate-800' : 'border-gray-150'
-        }`}>
-          {/* Avatar sphere */}
-          <div className={`shrink-0 rounded-full p-[2px] border-2 transition-colors duration-300 ${
-            theme === 'dark' ? 'border-white' : 'border-gray-900'
-          }`}>
-            <img 
-              src="https://res.cloudinary.com/dudmozd8z/image/upload/v1779573141/clipboard-image-1779573127_oef0qy.avif" 
-              alt="José Décio de Alencar" 
-              className="w-10 h-10 rounded-full object-cover"
-            />
-          </div>
-          
-          <div className="flex flex-col gap-0.5 justify-center flex-1 min-w-[240px]">
-            <span className={`font-display font-extrabold text-sm transition-colors duration-300 ${
-              theme === 'dark' ? 'text-white' : 'text-gray-900'
-            }`}>
-              José Décio de Alencar
-            </span>
-            <div className={`flex flex-wrap items-center gap-x-3 gap-y-1 text-xs font-semibold font-mono transition-colors duration-306 ${
-              theme === 'dark' ? 'text-slate-400' : 'text-gray-505'
-            }`}>
-              <span className={`font-black tracking-widest ${theme === 'dark' ? 'text-white drop-shadow-sm' : 'text-gray-900'}`}>
-                2026
-              </span>
-              <a href="#" onClick={(e) => { e.preventDefault(); setIsFormModalOpen(true); }} className={`flex items-center gap-1.5 transition-colors ${
-                theme === 'dark' ? 'hover:text-sky-400' : 'hover:text-[#005ba4]'
-              }`}>
-                <img src="https://res.cloudinary.com/dudmozd8z/image/upload/v1779574833/gmail-svgrepo-com_hwwnlb.svg" alt="Email" className="w-4 h-4 shrink-0" />
-                <span className="break-all">projetobrasilbilingue@gmail.com</span>
-              </a>
-              <a href="#" onClick={(e) => { e.preventDefault(); setIsWhatsappModalOpen(true); }} className={`flex items-center gap-1.5 transition-colors ${
-                theme === 'dark' ? 'hover:text-sky-400' : 'hover:text-[#005ba4] text-gray-400'
-              }`}>
-                <img src="https://res.cloudinary.com/dudmozd8z/image/upload/v1779574832/whatsapp-svgrepo-com_tgqnb3.svg" alt="WhatsApp" className="w-4 h-4" />
-                <span className="break-all">47 9 9903-4403</span>
-              </a>
-            </div>
-          </div>
-        </div>
-
-        {/* Subtitle / Lead section */}
-        <p className={`text-lg sm:text-xl font-medium leading-relaxed mb-8 border-l-4 border-[#005ba4] pl-4 italic transition-colors duration-300 ${
-          theme === 'dark' ? 'text-[#cfd5dc]' : 'text-gray-600'
-        }`}>
-          Um material didático para alfabetização simultânea em inglês e alemão, baseado em cubos coloridos, numbers e formação visual das palavras.
-        </p>
-
-        {/* SECTION: O que é o ABBA */}
-        <section id="o-que-e-o-abba" className="mb-10">
-          <h2 className={`font-display font-extrabold text-xl sm:text-2xl tracking-tight mb-3 transition-colors duration-300 ${
-            theme === 'dark' ? 'text-white' : 'text-gray-900'
-          }`}>
-            O que é o ABBA
-          </h2>
-          <div className={`leading-relaxed space-y-4 text-sm sm:text-base transition-colors duration-300 ${
-            theme === 'dark' ? 'text-[#cfd5dc]' : 'text-gray-750'
-          }`}>
-            <p>
-              O ABBA é um material didático para alfabetização simultânea em inglês e alemão. Ele consiste de <strong>150 cubos de madeira ou cartolina MDF</strong> de 27cm³ cada, com 900 letras selecionadas pela lógica do <strong>DIAGRAMA DE PARETO</strong> impressas em todas as seis faces of cada cubo.
-            </p>
-            <p>
-              Cada letra tem o número correspondente a sua ordem no alfabeto. Exemplo: <strong>A</strong>, primeira letra <em>(1)</em> e <strong>Z</strong>, vigésima sexta letra <em>(26)</em>.
-            </p>
-            <p className={`p-4 rounded-xl border transition-colors duration-300 ${
-              theme === 'dark' 
-                ? 'bg-slate-900/60 border-slate-800 text-[#cfd5dc]' 
-                : 'bg-[#FAF9F5] border-gray-200 text-gray-700'
-            }`}>
-              Cada cubo tem 6 lados. Destes, 2 lados têm letras pretas para escrever as palavras portuguesas, 2 lados letras azuis para as palavras inglesas e 2 lados letras vermelhas para as palavras alemãs. As letras da mesma cor devem ficar em lados vizinhos para facilitar a visualização das duas ao mesmo tempo ao se fazer os exercícios propostos.
-            </p>
-
-            {/* Exemplo de Codificação Block */}
-            <div className={`mt-8 mb-6 p-5 sm:p-7 rounded-[20px] border relative overflow-hidden transition-colors duration-300 ${
-              theme === 'dark' 
-                ? 'bg-[#040810] border-[#1A2639]' 
-                : 'bg-[#F8FAFC] border-slate-200 shadow-sm'
-            }`}>
-              {/* Subtle background grid pattern */}
-              <div className="absolute inset-0 pointer-events-none opacity-25" style={{
-                backgroundImage: 'url("data:image/svg+xml,%3Csvg width=\'30\' height=\'30\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cpath d=\'M 30 0 L 0 0 0 30\' fill=\'none\' stroke=\'%233B82F6\' stroke-width=\'0.5\' opacity=\'0.2\'/%3E%3C/svg%3E")',
-                backgroundSize: '30px 30px'
-              }}></div>
-              
-              <div className="relative z-10">
-                <div className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-[11px] font-black tracking-[0.15em] uppercase mb-6 ${
-                  theme === 'dark' ? 'bg-[#111A2C] text-[#F1F5F9]' : 'bg-slate-200/70 text-slate-805'
-                }`}>
-                  Exemplo de codificação:
-                </div>
-
-                <div className="space-y-6 text-[15px] sm:text-base leading-relaxed font-medium">
-                  <p className={theme === 'dark' ? 'text-[#E2E8F0]' : 'text-slate-700'}>
-                    <strong className={theme === 'dark' ? 'text-white font-extrabold' : 'text-slate-900 font-extrabold'}>Português</strong> <span className={`px-2 py-0.5 rounded text-[11px] uppercase tracking-wider ml-1 ${theme === 'dark' ? 'bg-white text-black font-extrabold' : 'bg-black text-white font-extrabold'}`}>(Preto)</span> : Escrever o número <span className={`px-1.5 py-0.5 rounded mx-0.5 ${theme === 'dark' ? 'bg-[#1E293B] text-slate-300' : 'bg-slate-200 text-slate-800'}`}>1</span> requer duas letras <span className={`px-2 py-0.5 rounded text-[11px] uppercase tracking-wider mx-0.5 font-extrabold ${theme === 'dark' ? 'bg-white text-black' : 'bg-black text-white'}`}>Pretas</span> <span className={`px-2 py-0.5 rounded mx-0.5 ${theme === 'dark' ? 'bg-white text-black font-bold' : 'bg-white border border-slate-300 text-slate-900 font-bold shadow-sm'}`}>U</span> e <span className={`px-2 py-0.5 rounded mx-0.5 ${theme === 'dark' ? 'bg-white text-black font-bold' : 'bg-white border border-slate-300 text-slate-900 font-bold shadow-sm'}`}>M</span> , que são a 21ª e a 13ª do alfabeto nesta ordem: <span className={theme === 'dark' ? 'text-[#94A3B8] font-mono font-semibold' : 'text-slate-500 font-mono font-semibold'}>[21, 13]</span>.
-                  </p>
-
-                  <p className={theme === 'dark' ? 'text-[#E2E8F0]' : 'text-slate-700'}>
-                    <strong className={theme === 'dark' ? 'text-white font-extrabold' : 'text-slate-900 font-extrabold'}>Inglês</strong> <span className="text-[#3B82F6] font-bold ml-1">(Azul)</span>: Escrever o mesmo número <span className={`px-1.5 py-0.5 rounded mx-0.5 ${theme === 'dark' ? 'bg-[#1E3A8A]/40 text-[#60A5FA]' : 'bg-blue-100 text-[#1E3A8A]'}`}>1</span> requer 3 letras <strong className="text-blue-500">azuis</strong> as quais, nos cubos, contêm respectively os seguintes números dispostos nesta ordem: <span className="text-[#3B82F6] font-mono font-medium tracking-wide">[<span className={`px-1.5 py-0.5 rounded mx-0.5 ${theme === 'dark' ? 'bg-[#1E3A8A]/40 text-[#60A5FA]' : 'bg-blue-100 text-[#1E3A8A]'}`}>15</span>, <span className={`px-1.5 py-0.5 rounded mx-0.5 ${theme === 'dark' ? 'bg-[#1E3A8A]/40 text-[#60A5FA]' : 'bg-blue-100 text-[#1E3A8A]'}`}>14</span>, <span className={`px-1.5 py-0.5 rounded mx-0.5 ${theme === 'dark' ? 'bg-[#1E3A8A]/40 text-[#60A5FA]' : 'bg-blue-100 text-[#1E3A8A]'}`}>5</span>]</span>.
-                  </p>
-
-                  <p className={theme === 'dark' ? 'text-[#E2E8F0]' : 'text-slate-700'}>
-                    <strong className={theme === 'dark' ? 'text-white font-extrabold' : 'text-slate-900 font-extrabold'}>Alemão</strong> <span className="text-[#EF4444] font-bold ml-1">(Vermelho)</span>: Já a palavra <span className={`px-2 py-0.5 rounded mx-1 font-bold ${theme === 'dark' ? 'bg-[#EF4444] text-white' : 'bg-[#EF4444] text-white shadow-sm'}`}>EINS</span> em alemão tem 4 letras <strong className="text-red-500">vermelhas</strong> correspondentes aos números <span className="text-[#EF4444] font-mono font-medium tracking-wide">[<span className={`px-1.5 py-0.5 rounded mx-0.5 ${theme === 'dark' ? 'bg-red-900/40 text-red-300' : 'bg-red-100 text-[#EF4444]'}`}>5</span>, <span className={`px-1.5 py-0.5 rounded mx-0.5 ${theme === 'dark' ? 'bg-red-900/40 text-red-300' : 'bg-red-100 text-[#EF4444]'}`}>9</span>, <span className={`px-1.5 py-0.5 rounded mx-0.5 ${theme === 'dark' ? 'bg-red-900/40 text-red-300' : 'bg-red-100 text-[#EF4444]'}`}>14</span>, <span className={`px-1.5 py-0.5 rounded mx-0.5 ${theme === 'dark' ? 'bg-red-900/40 text-red-300' : 'bg-red-100 text-[#EF4444]'}`}>19</span>]</span> exatamente nesta sequência.
-                  </p>
+            {/* Secção do Autor integrada com os seus Modais de Contacto locais */}
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-3 pt-2">
+              <div className={`shrink-0 rounded-full p-[2px] border-2 ${theme === 'dark' ? 'border-white' : 'border-gray-900'}`}>
+                <img 
+                  src="https://res.cloudinary.com/dudmozd8z/image/upload/v1779573141/clipboard-image-1779573127_oef0qy.avif" 
+                  alt="José Décio de Alencar" 
+                  className="w-10 h-10 rounded-full object-cover"
+                />
+              </div>
+              <div className="flex flex-col gap-0.5 justify-center flex-1 min-w-[240px]">
+                <p className={`font-display font-extrabold text-sm uppercase tracking-wider ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>
+                  AUTOR: JOSÉ DÉCIO DE ALENCAR
+                </p>
+                <p className={`text-xs ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>
+                  Gestor de PD&I (Projetos de Desenvolvimento e Inovação) • Blumenau, SC, Brasil
+                </p>
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs font-semibold font-mono mt-1">
+                  <a href="#" onClick={(e) => { e.preventDefault(); setIsFormModalOpen(true); }} className={`flex items-center gap-1.5 transition-colors ${theme === 'dark' ? 'text-sky-400 hover:text-sky-300' : 'text-[#005ba4] hover:text-[#004a87]'}`}>
+                    <img src="https://res.cloudinary.com/dudmozd8z/image/upload/v1779574833/gmail-svgrepo-com_hwwnlb.svg" alt="Email" className="w-4 h-4 shrink-0" />
+                    <span className="break-all">projetobrasilbilingue@gmail.com</span>
+                  </a>
+                  <a href="#" onClick={(e) => { e.preventDefault(); setIsWhatsappModalOpen(true); }} className={`flex items-center gap-1.5 transition-colors ${theme === 'dark' ? 'text-sky-400 hover:text-sky-300' : 'text-gray-400 hover:text-gray-500'}`}>
+                    <img src="https://res.cloudinary.com/dudmozd8z/image/upload/v1779574832/whatsapp-svgrepo-com_tgqnb3.svg" alt="WhatsApp" className="w-4 h-4" />
+                    <span className="break-all">47 9 9903-4403</span>
+                  </a>
                 </div>
               </div>
             </div>
+          </header>
 
-            {/* 3 IMAGENS LADO A LADO */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 my-8">
-              {renderThumbnail("https://res.cloudinary.com/dudmozd8z/image/upload/v1779565246/tabvermelho_iuejrf.avif", "Tabela Vermelho", "tables", 0)}
-              {renderThumbnail("https://res.cloudinary.com/dudmozd8z/image/upload/v1779565247/tabazul_eplu2h.avif", "Tabela Azul", "tables", 1)}
-              {renderThumbnail("https://res.cloudinary.com/dudmozd8z/image/upload/v1779565246/tabpreto_dbwmcl.avif", "Tabela Preto", "tables", 2)}
-            </div>
-            <p className={`text-xs text-center -mt-2 mb-8 ${theme === 'dark' ? 'text-white font-bold' : 'text-gray-800 font-semibold'}`}>
-              O ABBA ANALÓGICO de Cartolina
-            </p>
-          </div>
-        </section>
-
-        {/* SECTION: Como funciona */}
-        <section id="como-funciona" className="mb-10">
-          <h2 className={`font-display font-extrabold text-xl sm:text-2xl tracking-tight mb-3 transition-colors duration-300 ${
-            theme === 'dark' ? 'text-white' : 'text-gray-900'
+          {/* Corpo de Texto com a tipografia e espaçamentos do GitHub */}
+          <div className={`prose max-w-none font-sans text-base sm:text-lg leading-relaxed space-y-6 ${
+            theme === 'dark' ? 'prose-invert text-slate-300' : 'prose-slate text-slate-700'
           }`}>
-            Como funciona
-          </h2>
-          <div className={`leading-relaxed space-y-4 text-sm sm:text-base transition-colors duration-305 ${
-            theme === 'dark' ? 'text-[#cfd5dc]' : 'text-gray-700'
-          }`}>
-            <p>
-              Usam-se tabelas em folhas A4 com quadrados de 9 cm², nos quais estão impressos os números correspondentes às letras usadas para escrever os números de <strong>ZERO a CEM</strong> nas três línguas.
-            </p>
-            <p>
-              Cada tabela tem 10 números assim divididos: de 0 a 4 na frente e de 5 a 9 no verso, de 10 a 14 frente e 15 a 19 verso, e assim subsequentemente até a última com os números 90 a 94 na frente e 96 a 100 no verso.
-            </p>
-
-            {/* 2 IMAGENS LADO A LADO: Palavras Escritas */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 my-8 relative z-10">
-              {renderThumbnail("https://res.cloudinary.com/dudmozd8z/image/upload/v1779565246/palavras1_hj2w4z.avif", "Palavras Escritas 1", "words", 0)}
-              {renderThumbnail("https://res.cloudinary.com/dudmozd8z/image/upload/v1779565246/palavras2_bky3wy.avif", "Palavras Escritas 2", "words", 1)}
-            </div>
-            <p className={`text-xs text-center -mt-2 mb-8 ${theme === 'dark' ? 'text-white font-bold' : 'text-gray-800 font-semibold'}`}>
-              PALAVRAS ESCRITAS COM OS CUBOS DO ABBA ANALÓGICO
-            </p>
-          </div>
-        </section>
-
-        {/* SECTION: Objetivo das tarefas */}
-        <section id="objetivo-das-tarefas" className="mb-10">
-          <h2 className={`font-display font-extrabold text-xl sm:text-2xl tracking-tight mb-3 transition-colors duration-300 ${
-            theme === 'dark' ? 'text-white' : 'text-gray-900'
-          }`}>
-            Objetivo das tarefas
-          </h2>
-          <p className={`leading-relaxed text-sm sm:text-base transition-colors duration-300 ${
-            theme === 'dark' ? 'text-[#cfd5dc]' : 'text-gray-750'
-          }`}>
-            Proporcionar ao aprendiz uma forma prática e fácil de medir, comparar e controlar a velocidade com a qual lê e escreve ao mesmo tempo em que reconhece e identifica a composição das letras de cada palavra, na medida em que organiza e/ou coloca na sequência correta e de forma paralela, integrada e correspondente, a quantidade certa de letras necessárias para escrever cada número de 0 A 100 nos três idiomas.
-          </p>
-
-          {/* 2 IMAGENS LADO A LADO: Frases Escritas */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 my-8 relative z-10">
-            {renderThumbnail("https://res.cloudinary.com/dudmozd8z/image/upload/v1779565246/palav3_bhesqe.avif", "Frase Escrita 1", "phrases", 0)}
-            {renderThumbnail("https://res.cloudinary.com/dudmozd8z/image/upload/v1779565245/palavr4_qbydb0.avif", "Frase Escrita 2", "phrases", 1)}
-          </div>
-          <p className={`text-xs text-center -mt-2 mb-8 ${theme === 'dark' ? 'text-white font-bold' : 'text-gray-800 font-semibold'}`}>
-            FRASES ESCRITAS COM OS CUBOS DO ABBA ANALÓGICO
-          </p>
-        </section>
-
-         {/* SECTION: Teoria Alencarina */}
-        <section id="teoria-alencarina" className="mb-10">
-          <h2 className={`font-display font-extrabold text-xl sm:text-2xl tracking-tight mb-3 transition-colors duration-300 ${
-            theme === 'dark' ? 'text-white' : 'text-gray-900'
-          }`}>
-            Teoria Alencarina
-          </h2>
-          <div className={`leading-relaxed space-y-4 text-sm sm:text-base transition-colors duration-300 ${
-            theme === 'dark' ? 'text-[#cfd5dc]' : 'text-gray-700'
-          }`}>
-            <p>
-              Acreditamos que existe uma relação de equivalência entre os numerais que formam os números e as letras que formam as palavras dentro de cada idioma que usa o alfabeto.
-            </p>
-            <p>
-              Esta relação de equivalência é regida por um fator ainda desconhecido que determina que; a transformação de números em palavras, através da escrita dos números por extenso, representa em escala menor, porém fiel, toda a lógica da organization existente em todas as outras categorias de palavras como, os verbos, substantivos, pronomes, preposições, advérbios e artigos.
-            </p>
-            <p>
-              Isto faz com que a organização das letras dentro das palavras com as quais escrevemos os números por extenso seja representativa fiel da organização das letras dentro das palavras de todas as outras categorias gramaticais.
-            </p>
-
-            <p>
-              Isso ocorre porque o mesmo fator linguístico que determinou que a palavra numérica <strong>UM</strong> na língua portuguesa tivesse apenas duas letras, que estas letras fossem U e M e, que estas letras estivessem nesta sequência específica, também determina a quantidade, quais e em que ordem tem que estar as letras de todas as outras palavras, de todas as outras categorias gramaticais, não somente na língua portuguesa, mas em todas os idiomas que usam o alfabeto.
-            </p>
-          </div>
-        </section>
-
-        {/* SECTION: Conceito de símbolo linguístico */}
-        <section id="simbolo-linguistico" className="mb-10">
-          <h2 className={`font-display font-extrabold text-xl sm:text-2xl tracking-tight mb-3 transition-colors duration-300 ${
-            theme === 'dark' ? 'text-white' : 'text-gray-900'
-          }`}>
-            Conceito de símbolo linguístico
-          </h2>
-          <div className={`leading-relaxed space-y-4 text-sm sm:text-base transition-colors duration-300 ${
-            theme === 'dark' ? 'text-[#cfd5dc]' : 'text-gray-700'
-          }`}>
-            <p>
-              É a primeira imagem que registramos na memória, antes de conhecermos as palavras que as representam em nosso idioma materno, associada ao objeto ou conceito que originalmente se formou e ficou guardada em nosso cérebro quando começamos a ver, ouvir, perceber e entender o mundo a nossa volta.
-            </p>
-            <p>
-              A palavra portuguesa que representa o símbolo linguístico tem 4 letras, a primeira <strong>C</strong>, depois <strong>A</strong>, depois <strong>S</strong> e por último <strong>A</strong>, formando a palavra <strong>CASA</strong>. Este mesmo símbolo linguístico é descrito na língua inglesa pela palavra de 5 letras <strong>HOUSE</strong> que corresponde a palavra portuguesa CASA. Em inglês a primeira letra da palavra casa é H, depois O, depois U, depois S e por fim E.
-            </p>
-            <p>
-              Este mesmo símbolo linguístico é descrito na língua alemã pela palavra de 4 letras <strong>HAUS</strong> que corresponde a palavra portuguesa CASA e a palavra inglesa HOUSE. Em alemão a primeira letra é H, depois A, depois U, por último S.
-            </p>
-
-            <div className={`p-5 rounded-2xl border transition-colors duration-300 ${
-              theme === 'dark' 
-                ? 'bg-emerald-950/20 border-emerald-900/40 text-[#cfd5dc]' 
-                : 'bg-[#FAF9F5] border-[#006837]/15 text-gray-700'
+            
+            <p className={`font-semibold text-lg sm:text-xl border-l-4 border-blue-500 pl-4 py-1 rounded-r-xl ${
+              theme === 'dark' ? 'bg-blue-950/20 text-blue-300' : 'bg-blue-50/30 text-slate-900'
             }`}>
-              <span className={`text-xs font-black uppercase tracking-widest block mb-2 ${
-                theme === 'dark' ? 'text-emerald-400' : 'text-[#006837]'
-              }`}>PREMISSA ABBA</span>
-              <p className="italic">
-                "Quando o aprendiz faz os exercícios com o ABBA, a mente dele aprende a identificar automaticamente estas duas novas palavras, <strong>HOUSE</strong> e <strong>HAUS</strong>, para descrever este único símbolo linguístico que é <strong>SEMPRE</strong> o mesmo para todas as línguas."
+              Uma revolução metodológica e pedagógica de matriz brasileira voltada para o ensino de línguas estrangeiras e soletração multi-idiomas.
+            </p>
+            
+            {/* 1. O Conceito */}
+            <section id="o-que-e-o-abba" className="pt-4">
+              <h3 className={`font-display font-extrabold text-xl sm:text-2xl tracking-tight mb-3 ${theme === 'dark' ? 'text-white' : 'text-slate-950'}`}>
+                1. O Conceito e a Estrutura Fonética
+              </h3>
+              <p>
+                O projeto ABBA Digital foi concebido para espelhar a transição natural da fala para a escrita. Ao contrário dos métodos tradicionais de memorização mecânica, o sistema interliga as propriedades ordinais e fonéticas das letras através de cubos coloridos, organizando calhas de correspondência para múltiplos idiomas simultâneos: Português, Inglês, Alemão e Italiano.
               </p>
-            </div>
-            <p>
-              É importante enfatizar que o símbolo linguístico é sempre o mesmo, não somente para estas três línguas, mas para todas as outras, diferindo apenas nas palavras que o descrevem. Todas as palavras de todas as línguas que usam o alfabeto diferem apenas em três coisas: <strong>1. Quais letras usar para escrever</strong>, <strong>2. Quantas letras usar</strong> e <strong>3. A ordem em que estas letras devem ser dispostas</strong>.
-            </p>
-          </div>
-        </section>
-
-        {/* SECTION: Meta inicial e final */}
-        <section id="metas-do-projeto" className="mb-10">
-          <h2 className={`font-display font-extrabold text-xl sm:text-2xl tracking-tight mb-3 transition-colors duration-305 ${
-            theme === 'dark' ? 'text-white' : 'text-gray-900'
-          }`}>
-            Metas do Projeto
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-left">
-            <div className={`p-5 rounded-2xl border transition-colors duration-300 ${
-              theme === 'dark' ? 'border-slate-800 bg-slate-900/40' : 'border-gray-150 bg-[#FAF9F5]'
-            }`}>
-              <span className={`text-xs font-black uppercase tracking-widest ${theme === 'dark' ? 'text-white' : 'text-gray-400'}`}>Meta Inicial</span>
-              <p className={`text-sm mt-2 transition-colors duration-306 ${theme === 'dark' ? 'text-[#cfd5dc]' : 'text-gray-700'}`}>
-                Guiar o aprendiz para escrever com o auxílio dos cubos os números de <strong>0 a 100 nos três idiomas e na mesma velocidade</strong>, ou seja, que ele consiga escrever no mesmo tempo que leva para escrever em português.
+              <p>
+                O material prático original consiste de <strong>150 cubos de madeira ou cartolina MDF</strong> de 27cm³ cada, com 900 letras selecionadas pela lógica do <strong>DIAGRAMA DE PARETO</strong> impressas em todas as seis faces de cada cubo. Cada cubo tem 6 lados: 2 lados têm letras pretas para o português, 2 lados letras azuis para o inglês e 2 lados letras vermelhas para o alemão.
               </p>
-            </div>
-            <div className={`p-5 rounded-2xl border transition-colors duration-300 ${
-              theme === 'dark' ? 'border-sky-900/50 bg-sky-950/20' : 'border-[#005ba4]/20 bg-sky-50/20'
-            }`}>
-              <span className={`text-xs font-black uppercase tracking-widest ${theme === 'dark' ? 'text-white' : 'text-[#005ba4]'}`}>Meta Final</span>
-              <p className={`text-sm mt-2 transition-colors duration-306 ${theme === 'dark' ? 'text-[#cfd5dc]' : 'text-gray-700'}`}>
-                Transferir automaticamente as habilidades de leitura e escrita de tempos na língua portuguesa já desenvolvida pelo aluno alfabetizado para os idiomas <strong>inglês e alemão</strong>.
+
+              {/* Bloco de codificação adaptado ao tema */}
+              <div className={`my-6 p-5 rounded-xl border ${theme === 'dark' ? 'bg-slate-950/60 border-slate-800' : 'bg-slate-50 border-slate-200'}`}>
+                <span className="text-xs font-bold uppercase tracking-wider block mb-2 text-blue-500">Exemplo de codificação:</span>
+                <ul className="space-y-2 text-sm list-none pl-0">
+                  <li><strong>Português (Preto):</strong> Escrever o número 1 requer duas letras pretas <strong>U</strong> e <strong>M</strong> (a 21ª e 13ª do alfabeto).</li>
+                  <li><strong>Inglês (Azul):</strong> Escrever o mesmo número requer 3 letras azuis nas posições ordinais <strong>[15, 14, 5]</strong>.</li>
+                  <li><strong>Alemão (Vermelho):</strong> A palavra <strong>EINS</strong> tem 4 letras vermelhas correspondentes à sequência <strong>[5, 9, 14, 19]</strong>.</li>
+                </ul>
+              </div>
+
+              {/* Injeção das miniaturas locais no fluxo tipográfico */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 my-6">
+                {renderThumbnail("https://res.cloudinary.com/dudmozd8z/image/upload/v1779565246/tabvermelho_iuejrf.avif", "Tabela Vermelho", "tables", 0)}
+                {renderThumbnail("https://res.cloudinary.com/dudmozd8z/image/upload/v1779565247/tabazul_eplu2h.avif", "Tabela Azul", "tables", 1)}
+                {renderThumbnail("https://res.cloudinary.com/dudmozd8z/image/upload/v1779565246/tabpreto_dbwmcl.avif", "Tabela Preto", "tables", 2)}
+              </div>
+            </section>
+
+            {/* 2. Como Funciona */}
+            <section id="como-funciona" className="pt-4">
+              <h3 className={`font-display font-extrabold text-xl sm:text-2xl tracking-tight mb-3 ${theme === 'dark' ? 'text-white' : 'text-slate-950'}`}>
+                2. A Inovação dos Cubos e Conexões Físico-Digitais
+              </h3>
+              <p>
+                A grande inovação reside na representation tridimensional do alfabeto. As conexões elásticas (ou cabos tensores virtuais) demonstram visualmente como uma única raiz alfabética se distribui e se comporta na formação de palavras em ecossistemas fonéticos completamente distintos, estimulando a memória espacial e cognitiva da criança.
               </p>
-            </div>
-          </div>
+              <p>
+                No modelo analógico, usavam-se tabelas em folhas A4 com quadrados de 9 cm² contendo os números correspondentes às letras usadas para escrever de <strong>ZERO a CEM</strong> nas três línguas.
+              </p>
 
-          {/* 1 IMAGEM SOZINHA E CENTRALIZADA: Painel Magnético */}
-          <div className="flex flex-col items-center gap-2 text-center font-mono my-8 max-w-4xl mx-auto w-full">
-            {renderThumbnail("https://res.cloudinary.com/dudmozd8z/image/upload/v1779565245/painel_k2fqw5.avif", "O Painel Magnético do ABBA", "panel", 0, "aspect-[4/3] md:aspect-video", true)}
-            <p className={`text-xs mt-1 ${theme === 'dark' ? 'text-white font-bold' : 'text-gray-800 font-semibold'}`}>
-              O PAINEL MAGNÉTICO DO ABBA
-            </p>
-          </div>
-        </section>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 my-6">
+                {renderThumbnail("https://res.cloudinary.com/dudmozd8z/image/upload/v1779565246/palavras1_hj2w4z.avif", "Palavras Escritas 1", "words", 0)}
+                {renderThumbnail("https://res.cloudinary.com/dudmozd8z/image/upload/v1779565246/palavras2_bky3wy.avif", "Palavras Escritas 2", "words", 1)}
+              </div>
+            </section>
 
-        {/* SECTION: Fundamentação lógica */}
-        <section id="fundamentacao-logica" className="mb-10">
-          <h2 className={`font-display font-extrabold text-xl sm:text-2xl tracking-tight mb-3 transition-colors duration-300 ${
-            theme === 'dark' ? 'text-white' : 'text-gray-900'
-          }`}>
-            Fundamentação Lógica
-          </h2>
-          <div className={`leading-relaxed space-y-4 text-sm sm:text-base transition-colors duration-300 ${
-            theme === 'dark' ? 'text-[#cfd5dc]' : 'text-gray-770'
-          }`}>
-            <p>
-              Supomos que tais exercícios empíricos estimulam a formação de <strong>novas conexões sinápticas paralelas</strong> às já existentes entre o símbolo linguístico e a palavra portuguesa usada para descrevê-lo, ligando o mesmo símbolo linguístico às palavras correspondentes nas línguas inglesa e/ou alemã, simplesmente porque este é o caminho mais curto a ser percorrido pelos impulsos elétricos desencadeados no nosso cérebro.
-            </p>
-          </div>
-        </section>
+            {/* 3. Objetivos */}
+            <section id="objetivo-das-tarefas" className="pt-4">
+              <h3 className={`font-display font-extrabold text-xl sm:text-2xl tracking-tight mb-3 ${theme === 'dark' ? 'text-white' : 'text-slate-950'}`}>
+                3. Velocidade de Escrita e Teoria Alencarina
+              </h3>
+              <p>
+                O objetivo das tarefas é proporcionar ao aprendiz uma forma prática de medir, comparar e controlar a velocidade com a qual lê e escreve ao mesmo tempo em que identifica as letras de cada palavra de forma paralela e integrada.
+              </p>
+              <p>
+                A <strong>Teoria Alencarina</strong> defende que existe uma relação de equivalência entre os numerais que formam os números e as letras que formam as palavras em qualquer idioma, servindo como uma amostra fiel de toda a organização gramatical e sináptica do cérebro humano.
+              </p>
 
-        {/* SECTION: Problema que resolve / Diferencial / vantagem */}
-        <section id="problema-e-diferencial" className={`mb-10 p-6 rounded-3xl space-y-6 transition-colors duration-300 ${
-          theme === 'dark' 
-            ? 'bg-slate-900/40 border border-slate-800' 
-            : 'bg-slate-50 border border-slate-150'
-        }`}>
-          <div>
-            <span className={`text-[10px] font-black tracking-widest uppercase ${theme === 'dark' ? 'text-white' : 'text-slate-450'}`}>A DOR</span>
-            <h3 className={`font-display font-black text-lg tracking-tight mt-0.5 mb-1.5 ${
-              theme === 'dark' ? 'text-white' : 'text-slate-900'
-            }`}>Problema que resolve</h3>
-            <p className={`text-sm leading-relaxed ${theme === 'dark' ? 'text-[#cfd5dc]' : 'text-slate-700'}`}>
-              O ABBA resolve o problema da ineficácia crônica do ensino de idiomas estrangeiros na escola brasileira.
-            </p>
-          </div>
-          <div className={`border-t pt-5 transition-colors duration-300 ${theme === 'dark' ? 'border-slate-800' : 'border-slate-200'}`}>
-            <span className={`text-[10px] font-black tracking-widest uppercase ${theme === 'dark' ? 'text-white' : 'text-slate-450'}`}>A ABORDAGEM</span>
-            <h3 className={`font-display font-black text-lg tracking-tight mt-0.5 mb-1.5 font-sans ${
-              theme === 'dark' ? 'text-white' : 'text-gray-900'
-            }`}>Diferencial Único</h3>
-            <p className={`text-sm leading-relaxed ${theme === 'dark' ? 'text-[#cfd5dc]' : 'text-slate-700'}`}>
-              Divide as habilidades linguísticas em duas etapas dinstintas: <strong>primeiro só LEITURA/ESCRITA</strong> e deixa a FALA/AUDIÇÃO para um momento futuro.
-            </p>
-          </div>
-          <div className={`border-t pt-5 transition-colors duration-300 ${theme === 'dark' ? 'border-slate-800' : 'border-slate-200'}`}>
-            <span className={`text-[10px] font-black tracking-widest uppercase ${theme === 'dark' ? 'text-white' : 'text-slate-450'}`}>ILUSTRAÇÃO PRÁTICA</span>
-            <p className={`text-sm leading-relaxed italic mt-2 pl-4 border-l-2 ${
-              theme === 'dark' ? 'text-[#cfd5dc]/80 border-slate-750' : 'text-slate-700 border-slate-350'
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 my-6">
+                {renderThumbnail("https://res.cloudinary.com/dudmozd8z/image/upload/v1779565246/palav3_bhesqe.avif", "Frase Escrita 1", "phrases", 0)}
+                {renderThumbnail("https://res.cloudinary.com/dudmozd8z/image/upload/v1779565245/palavr4_qbydb0.avif", "Frase Escrita 2", "phrases", 1)}
+              </div>
+            </section>
+
+            {/* 4. Símbolo Linguístico */}
+            <section id="simbolo-linguistico" className="pt-4">
+              <h3 className={`font-display font-extrabold text-xl sm:text-2xl tracking-tight mb-3 ${theme === 'dark' ? 'text-white' : 'text-slate-950'}`}>
+                4. O Símbolo Linguístico Multilíngue
+              </h3>
+              <p>
+                O símbolo linguístico é a imagem mental que registramos antes de conhecermos as palavras. Por exemplo, o conceito de uma habitação gera a palavra de 4 letras <strong>CASA</strong> em português, a de 5 letras <strong>HOUSE</strong> em inglês, e a de 4 letras <strong>HAUS</strong> em alemão. O símbolo é o mesmo; mudam apenas quais letras usar, a quantidade e a ordem de disposição.
+              </p>
+              
+              <div className={`p-4 rounded-xl border my-4 ${theme === 'dark' ? 'bg-emerald-950/20 border-emerald-900/40' : 'bg-green-50/40 border-green-200'}`}>
+                <p className="italic text-sm m-0">
+                  "Quando o aprendiz faz os exercícios com o ABBA, a mente dele aprende a identificar automaticamente estas duas novas palavras, <strong>HOUSE</strong> e <strong>HAUS</strong>, para descrever este único símbolo linguístico que é sempre o mesmo."
+                </p>
+              </div>
+            </section>
+
+            {/* 5. Metas */}
+            <section id="metas-do-projeto" className="pt-4">
+              <h3 className={`font-display font-extrabold text-xl sm:text-2xl tracking-tight mb-3 ${theme === 'dark' ? 'text-white' : 'text-slate-950'}`}>
+                5. Metas do Sistema ABBA
+              </h3>
+              <p>
+                A meta inicial do projeto é guiar o aluno a escrever de 0 a 100 nos três idiomas na mesma velocidade que escreve em português. A meta final é transferir de forma automática as habilidades de leitura e escrita já consolidadas no idioma materno diretamente para o inglês e o alemão.
+              </p>
+              
+              <div className="flex flex-col items-center gap-2 my-6">
+                {renderThumbnail("https://res.cloudinary.com/dudmozd8z/image/upload/v1779565245/painel_k2fqw5.avif", "O Painel Magnético do ABBA", "panel", 0, "aspect-video", true)}
+              </div>
+            </section>
+
+            {/* 6. Insight */}
+            <section id="como-nasceu-o-projeto" className="pt-4">
+              <h3 className={`font-display font-extrabold text-xl sm:text-2xl tracking-tight mb-3 ${theme === 'dark' ? 'text-white' : 'text-slate-950'}`}>
+                6. Fundamentação e a Origem do Insight
+              </h3>
+              <p>
+                O insight original nasceu em Blumenau (SC), cidade onde famílias preservam o alemão clássico da colonização, combinado com a experiência de José Décio como tradutor em feiras industriais de Frankfurt, na Alemanha. Ao notar conexões exatas como a transição fonética das letras <strong>D</strong> e <strong>TH</strong> (onde <em>Three</em> vira <em>Drei</em>), o sistema ganhou vida.
+              </p>
+
+              <div className="flex flex-col items-center gap-2 my-6">
+                {renderThumbnail("https://res.cloudinary.com/dudmozd8z/image/upload/v1779565508/habenter_cfxsmy.avif", "A Camiseta Bordada do ABBA", "shirt", 0, "aspect-video", true)}
+              </div>
+            </section>
+
+            {/* Rodapé do Artigo no padrão GitHub */}
+            <footer className={`pt-8 border-t text-center text-sm font-medium transition-colors ${
+              theme === 'dark' ? 'border-slate-800 text-slate-500' : 'border-gray-150 text-slate-400'
             }`}>
-              "É como se fizesse um degrau para subir uma calçada alta ou uma ilha de tráfego para atravessar uma rua larga com trânsito nos dois sentidos. Subir um degrau de cada vez é mais fácil e, preocupar-se apenas com um sentido de trânsito de cada vez, reduz a probabilidade de acidente. Assim, concentrar-se apenas na leitura/escrita e livrar-se temporariamente da preocupação com o falar/ouvir, eleva sobremaneira a probabilidade de êxito do aprendiz."
-            </p>
+              <div className="loadingspinner scale-[0.6] origin-center mb-4 mx-auto block">
+                <div id="square1" /> <div id="square2" /> <div id="square3" /> <div id="square4" /> <div id="square5" />
+              </div>
+              <p className="uppercase tracking-widest font-bold text-xs mb-1">Ábaco Brasileiro de Alfabetização Bilíngue</p>
+              <p>© {new Date().getFullYear()} Ábaco Digital. Todos os direitos reservados ao inventor e autor José Décio de Alencar.</p>
+            </footer>
+
           </div>
-          <div className={`border-t pt-5 transition-colors duration-300 ${theme === 'dark' ? 'border-slate-800' : 'border-slate-200'}`}>
-            <span className={`text-[10px] font-black tracking-widest uppercase ${theme === 'dark' ? 'text-white' : 'text-slate-450'}`}>PROPOSTA DE VALOR</span>
-            <h3 className={`font-display font-black text-lg tracking-tight mt-0.5 mb-1.5 ${
-              theme === 'dark' ? 'text-white' : 'text-gray-900'
-            }`}>Vantagem Competitiva</h3>
-            <p className={`text-sm leading-relaxed ${theme === 'dark' ? 'text-[#cfd5dc]' : 'text-slate-700'}`}>
-              Facilita e apressa o aprendizado porque requer menos competência e habilidade no início do processo uma vez que não há necessidade de adaptar o aparelho auditivo para distinguir os novos ou diferentes fonemas do segundo idioma, nem o aparelho fonador para emitir os novos sons requeridos.
-            </p>
-          </div>
-        </section>
-
-        {/* SECTION: Geração do insight */}
-        <section id="como-nasceu-o-projeto" className="mb-10">
-          <h2 className={`font-display font-extrabold text-xl sm:text-2xl tracking-tight mb-3 transition-colors duration-300 ${
-            theme === 'dark' ? 'text-white' : 'text-gray-900'
-          }`}>
-            Como nasceu o projeto (A Geração do Insight)
-          </h2>
-          <div className={`leading-relaxed space-y-4 text-sm sm:text-base transition-colors duration-300 ${
-            theme === 'dark' ? 'text-[#cfd5dc]' : 'text-gray-700'
-          }`}>
-            <p>
-              O insight nasceu da conjunção de fatores cruciais: o fato de falar português como língua materna, ser fluente em inglês e residir em Blumenau (SC) há 40 anos, onde as famílias de origem alemã preservam a língua alemã de sua época de colonização.
-            </p>
-            <p>
-              José Décio trabalhou como tradutor de inglês em feiras industriais em Frankfurt, na Alemanha, onde teve a oportunidade de observar <em>in loco</em> as semelhanças morfológicas, sintáticas e semânticas entre as três línguas. Pesquisando a origem e a história delas, constatou padrões pequenos mas linguisticamente fundamentais que apontam para regras regulares:
-            </p>
-
-            <ul className={`list-disc pl-5 space-y-2 mt-4 text-sm sm:text-base transition-colors duration-300 ${
-              theme === 'dark' ? 'text-[#cfd5dc]' : 'text-gray-750'
-            }`}>
-              <li>
-                As letras do alfabeto são pronunciadas em alemão assim como em português. Enquanto o inglês fala <strong>A (ei) B (bi) C (ci) D (di)</strong>, o alemão fala <strong>A (a) B (be) C (ce) D (de)</strong>, iguaizinhos à nossa grafia fonética em português.
-              </li>
-              <li>
-                As letras <strong>V e F</strong>, <strong>Z e S</strong>, e <strong>B e P</strong> são sonoramente inversas entre português e alemão. Exemplo: <em>Zusammen</em>, <em>Uplegen</em>, etc.
-              </li>
-              <li>
-                As letras <strong>D</strong> e <strong>TH</strong> realizam esta transição fonética exata entre inglês e alemão. Exemplo: <em>Three</em> se torna <em>Drei</em>, <em>South</em> se torna <em>Süd</em>.
-              </li>
-            </ul>
-
-            <p className="mt-4">
-              Saber que estes padrões são consequências do fato de a língua inglesa resultar da própria integração entre o idioma latim (romano) e o germânico antigo focado das lutas germânicas, atuou como a queda de maçã sob a mente!
-            </p>
-            <p>
-              <em>"Todo este histórico se desenrolou antes de eu ingressar no IFC. De fato, entrei no IFC na esperança de que, como inovador em uma instituição de prestígio que traz o DNA da inovação em seu estatuto, fosse mais fácil obter apoio institucional para concretizar e desenvolver este brilhante projeto."</em>
-            </p>
-          </div>
-        </section>
-
-        {/* 1 IMAGEM SOZINHA E CENTRALIZADA: Camiseta Bordada */}
-        <div className="flex flex-col items-center gap-2 text-center font-mono my-8 max-w-4xl mx-auto w-full">
-          {renderThumbnail("https://res.cloudinary.com/dudmozd8z/image/upload/v1779565508/habenter_cfxsmy.avif", "A Camiseta Bordada do ABBA", "shirt", 0, "aspect-[4/3] md:aspect-video", true)}
-          <p className={`text-xs mt-1 ${theme === 'dark' ? 'text-white font-bold' : 'text-gray-800 font-semibold'}`}>
-            A CAMISETA BORDADA DO ABBA
-          </p>
-        </div>
-
-        {/* Editorial Footer Quote */}
-        <div className={`border-t pt-8 mt-12 flex flex-col items-center select-none text-center transition-colors duration-300 ${
-          theme === 'dark' ? 'border-slate-800' : 'border-gray-200'
-        }`}>
-          {/* Custom loadingspinner replacing the heart */}
-          <div className="loadingspinner scale-[0.8] origin-center my-1 select-none">
-            <div id="square1" />
-            <div id="square2" />
-            <div id="square3" />
-            <div id="square4" />
-            <div id="square5" />
-          </div>
-          <p className={`font-display font-black tracking-wider text-[11px] uppercase mr-0.5 transition-colors duration-300 ${
-            theme === 'dark' ? 'text-white' : 'text-gray-500'
-          }`}>
-            Ábaco Brasileiro de Alfabetização Bilíngue
-          </p>
-          <p className={`text-xs mt-1 max-w-sm transition-colors duration-300 ${
-            theme === 'dark' ? 'text-slate-500' : 'text-gray-400'
-          }`}>
-            José Décio de Alencar © 2026. Todos os direitos reservados.
-          </p>
-        </div>
-      </article>
+        </article>
     </div>
 
       {/* Immersive fluid image gallery overlay */}
