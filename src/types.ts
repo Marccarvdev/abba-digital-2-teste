@@ -58,11 +58,9 @@ export interface TaskItem {
 export interface StudentSubmission {
   id: string;
   studentName: string;
-  studentEmail?: string;
   taskTitle: string;
   submittedAt: string;
   spelledWords: SavedWord[];
-  taskFiles?: { name: string; size: string; url?: string }[];
 }
 
 export interface AccessCode {
@@ -73,4 +71,3 @@ export interface AccessCode {
   durationLabel: string;
   status: 'active' | 'expired';
 }
-
