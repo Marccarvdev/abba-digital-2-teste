@@ -1270,6 +1270,26 @@ export default function App() {
     };
 
     const handlePointerMove = (e: PointerEvent) => {
+      // Calculate delta y before dragLastMouse is updated
+      const dy = dragLastMouseRef.current.x !== 0 || dragLastMouseRef.current.y !== 0
+        ? e.clientY - dragLastMouseRef.current.y
+        : 0;
+
+      // Scroll active scroll container or window 1:1 with hand movement during drag!
+      const isDragging = draggedCubeRef.current !== null || draggedTrayIndexRef.current !== null || draggedShelfIndexRef.current !== null;
+      if (isDragging && dy !== 0) {
+        if (boardRef.current) {
+          const boardRect = boardRef.current.getBoundingClientRect();
+          if (e.clientX >= boardRect.left && e.clientX <= boardRect.right && e.clientY >= boardRect.top && e.clientY <= boardRect.bottom) {
+            boardRef.current.scrollBy({ top: dy });
+          } else {
+            window.scrollBy({ top: dy });
+          }
+        } else {
+          window.scrollBy({ top: dy });
+        }
+      }
+
       // Map pointer coordinates directly and milimetrically to eliminate drag latency,
       // ensuring the dragging cube coordinates align instantly with the finger.
       setPointerPos({ x: e.clientX, y: e.clientY });
