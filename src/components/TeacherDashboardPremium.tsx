@@ -3,9 +3,10 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Search, Bell, User, BookOpen, Key, History, Plus, FileText, 
   CheckCircle, LogOut, Download, ExternalLink, Calendar, 
-  ChevronRight, Award, Trash2, ShieldAlert
+  ChevronRight, Award, Trash2, ShieldAlert, Menu, X, Copy,
+  Check, Sparkles, Activity
 } from 'lucide-react';
-import { User as UserType, TaskItem, StudentSubmission, AccessCode, SavedWord } from '../types';
+import { User as UserType, TaskItem, StudentSubmission, AccessCode } from '../types';
 import { supabase } from '../supabaseClient';
 
 interface TeacherDashboardPremiumProps {
@@ -19,9 +20,20 @@ export const TeacherDashboardPremium: React.FC<TeacherDashboardPremiumProps> = (
   onLogout, 
   onLaunchReviewMode 
 }) => {
-  // Navigation / Tabs (Inbox = Submissions, AccessKeys = Links, Logs = actions log, Tasks = all tasks, Students = list students)
+  // Navigation / Tabs (inbox = Submissions, accessKeys = Links, logs = actions log, tasks = all tasks, students = list students)
   const [activeFolder, setActiveFolder] = useState<'inbox' | 'accessKeys' | 'logs' | 'tasks' | 'students'>('inbox');
   
+  // Mobile drawers toggle states
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+  const [isMobileStatsOpen, setIsMobileStatsOpen] = useState(false);
+
+  // Modals visibility states
+  const [isLinkModalOpen, setIsLinkModalOpen] = useState(false);
+  const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
+
+  // Followed mentors list simulation
+  const [followedMentors, setFollowedMentors] = useState<string[]>([]);
+
   // Database States
   const [submissions, setSubmissions] = useState<StudentSubmission[]>([]);
   const [tasks, setTasks] = useState<TaskItem[]>([]);
@@ -38,9 +50,6 @@ export const TeacherDashboardPremium: React.FC<TeacherDashboardPremiumProps> = (
   const [searchQuery, setSearchQuery] = useState('');
   const [filterType, setFilterType] = useState<'pending' | 'evaluated' | 'all'>('all');
 
-  // Floating Sidebar Creator Drawer state
-  const [drawerTab, setDrawerTab] = useState<'link' | 'task'>('link');
-  
   // Create Link form states
   const [selectedStudentName, setSelectedStudentName] = useState('');
   const [selectedTaskId, setSelectedTaskId] = useState('');
@@ -56,6 +65,10 @@ export const TeacherDashboardPremium: React.FC<TeacherDashboardPremiumProps> = (
   const [taskLang, setTaskLang] = useState<'pt' | 'en' | 'de'>('pt');
   const [taskPriority, setTaskPriority] = useState<'Alta' | 'Média' | 'Baixa'>('Alta');
   const [isCreatingTask, setIsCreatingTask] = useState(false);
+
+  // Copied states for dynamic feedback
+  const [copiedLink, setCopiedLink] = useState(false);
+  const [copiedCodeText, setCopiedCodeText] = useState<string | null>(null);
 
   // Sincronizar dados do Supabase
   const fetchData = async () => {
@@ -119,7 +132,7 @@ export const TeacherDashboardPremium: React.FC<TeacherDashboardPremiumProps> = (
           id: l.link_id,
           code: l.link_id,
           studentName: l.student_name,
-          expiresAt: Date.now() + 3600000, // Placeholder
+          expiresAt: Date.now() + 3600000, 
           durationLabel: '1 Hora',
           status: 'active'
         }));
@@ -302,17 +315,10 @@ export const TeacherDashboardPremium: React.FC<TeacherDashboardPremiumProps> = (
         createdAt: new Date().toISOString()
       };
 
-      // Registrar código na lista de códigos local
+      // Registrar código localmente
       const localRegistry = JSON.parse(localStorage.getItem('abba_invite_codes_registry') || '[]');
       localRegistry.push(payload);
       localStorage.setItem('abba_invite_codes_registry', JSON.stringify(localRegistry));
-
-      // Gerar link codificado
-      const base64Str = btoa(unescape(encodeURIComponent(JSON.stringify({
-        name: payload.name,
-        expiresAt: payload.expiresAt,
-        codeId: payload.id
-      }))));
 
       const magicLink = `${window.location.origin}/?code=ABBA-${payload.code}`;
       
@@ -339,7 +345,7 @@ export const TeacherDashboardPremium: React.FC<TeacherDashboardPremiumProps> = (
         url: magicLink
       });
 
-      fetchData(); // Recarregar dados
+      fetchData(); 
 
     } catch (err) {
       console.error('Erro ao gerar link de acesso:', err);
@@ -389,6 +395,7 @@ export const TeacherDashboardPremium: React.FC<TeacherDashboardPremiumProps> = (
         setTaskDesc('');
         setTaskWords('DADO, BOLA, SOL');
         alert(`Tarefa "${dbPayload.title}" criada e salva com sucesso no Supabase! 📝`);
+        setIsTaskModalOpen(false);
         fetchData();
       } else {
         console.error('Erro ao salvar no banco:', error);
@@ -433,1030 +440,1497 @@ export const TeacherDashboardPremium: React.FC<TeacherDashboardPremiumProps> = (
   const selectedSubmission = submissions.find(s => s.id === selectedSubmissionId);
   const selectedStudent = students.find(s => s.id === selectedStudentId);
 
+  // Dinamicamente obter dados do estudante para o painel de estatísticas lateral
+  const activeStatStudent = selectedStudent || students[0] || {
+    name: 'Estudante',
+    img: 'https://lh3.googleusercontent.com/aida-public/AB6AXuCHUQK8IorzIumgthKFtCPWo2riabZasOxpyAW_sE4zJHYFnV4QDcPGS-U_1nRfZo44W96KrUL9V4AJ1dHZt6C_NrkzcM3ViQMTKT1yYT9_glo5PCAbYoCRs0OZrUsWReuBmqxZ0OjLynylvuIMlhsKTn72v2vEDG7pcUZ3p27dt4TQuOMEATxKfXdCfzLV5WxnEXcMk_Fpi0Jo0_Bh0_L6aUJqzMsztsgTbUJq-4Al1qVBT0Q4Np9mcK6h7czZNg2yCBwQ5mIccXAN',
+    progress: 32
+  };
+
   // Obter cores para as linguagens
   const getLanguageDetails = (taskTitle: string) => {
     const titleLower = taskTitle.toLowerCase();
     if (titleLower.includes('alemão') || titleLower.includes('deutsch') || titleLower.includes('de')) {
-      return { label: '#ALEMÃO', colorClass: 'from-amber-500 to-red-500 text-amber-200' };
+      return { label: 'ALEMÃO', colorClass: 'bg-amber-100 text-amber-600 border border-amber-200' };
     }
     if (titleLower.includes('inglês') || titleLower.includes('english') || titleLower.includes('en')) {
-      return { label: '#INGLÊS', colorClass: 'from-cyan-500 to-blue-500 text-cyan-200' };
+      return { label: 'INGLÊS', colorClass: 'bg-blue-100 text-blue-600 border border-blue-200' };
     }
-    return { label: '#PORTUGUÊS', colorClass: 'from-purple-500 to-pink-500 text-purple-200' };
+    return { label: 'PORTUGUÊS', colorClass: 'bg-purple-100 text-purple-600 border border-purple-200' };
+  };
+
+  // Simular mentor seguir/seguindo
+  const toggleFollowMentor = (mentorName: string) => {
+    if (followedMentors.includes(mentorName)) {
+      setFollowedMentors(prev => prev.filter(m => m !== mentorName));
+    } else {
+      setFollowedMentors(prev => [...prev, mentorName]);
+    }
   };
 
   return (
-    <div className="min-h-screen bg-[#07080f] text-slate-100 font-sans flex select-none selection:bg-purple-900 selection:text-purple-200 overflow-hidden">
+    <div className="min-h-screen bg-[#e2e8f0] font-sans flex items-center justify-center p-0 md:p-4 lg:p-8 select-none overflow-hidden relative">
       
-      {/* 1. COLUNA: SIDEBAR (Menu minimalista escuro) */}
-      <aside className="w-[280px] bg-[#0c0d1b]/90 border-r border-white/5 flex flex-col shrink-0 relative z-10">
+      {/* Container Principal */}
+      <main className="w-full max-w-[1440px] bg-[#f8fafc] rounded-none md:rounded-3xl shadow-2xl flex overflow-hidden min-h-screen md:min-h-[900px] h-screen md:h-[90vh] transition-all relative">
         
-        {/* Perfil do Professor */}
-        <div className="p-6 border-b border-white/5 flex items-center gap-3.5">
-          <div className="relative group">
-            <div className="absolute inset-0 bg-gradient-to-tr from-purple-500 to-pink-500 rounded-full blur-sm opacity-50 group-hover:opacity-80 transition-opacity" />
-            <img 
-              src="https://res.cloudinary.com/dudmozd8z/image/upload/v1779573141/clipboard-image-1779573127_oef0qy.avif" 
-              alt="Avatar" 
-              className="w-11 h-11 rounded-full object-cover relative z-10 border border-white/10" 
-            />
-            <div className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-500 rounded-full border-2 border-[#0c0d1b] z-20" />
-          </div>
-          <div className="flex flex-col min-w-0">
-            <span className="font-bold text-[14px] text-white truncate leading-tight">{user.name}</span>
-            <span className="text-[11px] text-slate-400 font-semibold truncate mt-0.5">Professor Administrador</span>
-          </div>
-        </div>
-
-        {/* Logo ABBA */}
-        <div className="px-6 py-4 flex items-center gap-3">
-          <img 
-            src="https://res.cloudinary.com/dudmozd8z/image/upload/v1779315941/logoabra2_kls3we.svg" 
-            alt="ABBA" 
-            className="w-7 h-7 object-contain animate-pulse" 
-          />
-          <span className="font-extrabold text-[15px] tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400">ABBA DIGITAL</span>
-        </div>
-
-        {/* Menu de Pastas (Folders) */}
-        <nav className="flex-1 px-4 py-4 space-y-1.5 overflow-y-auto custom-scrollbar">
-          <span className="px-3 text-[10px] font-black uppercase text-slate-500 tracking-wider block mb-2">Plataforma</span>
-          
-          <button
-            onClick={() => setActiveFolder('inbox')}
-            className={`w-full flex items-center justify-between px-3.5 py-3 rounded-2xl transition-all duration-300 font-medium text-xs ${
-              activeFolder === 'inbox' 
-                ? 'bg-gradient-to-r from-purple-500/10 to-pink-500/10 text-pink-400 border-l-[3px] border-pink-500 border border-white/5' 
-                : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
-            }`}
-          >
-            <div className="flex items-center gap-3">
-              <FileText className="w-[17px] h-[17px] shrink-0" />
-              <span>Submissões de Alunos</span>
-            </div>
-            {submissions.length > 0 && (
-              <span className="px-2 py-0.5 bg-pink-600/80 text-pink-100 text-[10px] font-bold rounded-full">{submissions.length}</span>
-            )}
-          </button>
-
-          <button
-            onClick={() => setActiveFolder('accessKeys')}
-            className={`w-full flex items-center justify-between px-3.5 py-3 rounded-2xl transition-all duration-300 font-medium text-xs ${
-              activeFolder === 'accessKeys' 
-                ? 'bg-gradient-to-r from-purple-500/10 to-pink-500/10 text-pink-400 border-l-[3px] border-pink-500 border border-white/5' 
-                : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
-            }`}
-          >
-            <div className="flex items-center gap-3">
-              <Key className="w-[17px] h-[17px] shrink-0" />
-              <span>Chaves de Acesso Ativas</span>
-            </div>
-            {activeCodes.length > 0 && (
-              <span className="px-2 py-0.5 bg-slate-800 text-slate-300 text-[10px] font-bold rounded-full">{activeCodes.length}</span>
-            )}
-          </button>
-
-          <button
-            onClick={() => setActiveFolder('logs')}
-            className={`w-full flex items-center justify-between px-3.5 py-3 rounded-2xl transition-all duration-300 font-medium text-xs ${
-              activeFolder === 'logs' 
-                ? 'bg-gradient-to-r from-purple-500/10 to-pink-500/10 text-pink-400 border-l-[3px] border-pink-500 border border-white/5' 
-                : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
-            }`}
-          >
-            <div className="flex items-center gap-3">
-              <History className="w-[17px] h-[17px] shrink-0" />
-              <span>Registro de Ações</span>
-            </div>
-            {actionLogs.length > 0 && (
-              <span className="w-2.5 h-2.5 bg-cyan-500 rounded-full animate-ping shrink-0" />
-            )}
-          </button>
-
-          <button
-            onClick={() => setActiveFolder('tasks')}
-            className={`w-full flex items-center justify-between px-3.5 py-3 rounded-2xl transition-all duration-300 font-medium text-xs ${
-              activeFolder === 'tasks' 
-                ? 'bg-gradient-to-r from-purple-500/10 to-pink-500/10 text-pink-400 border-l-[3px] border-pink-500 border border-white/5' 
-                : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
-            }`}
-          >
-            <div className="flex items-center gap-3">
-              <BookOpen className="w-[17px] h-[17px] shrink-0" />
-              <span>Tarefas Criadas</span>
-            </div>
-            <span className="px-2 py-0.5 bg-slate-800 text-slate-400 text-[10px] font-bold rounded-full">{tasks.length}</span>
-          </button>
-
-          <button
-            onClick={() => setActiveFolder('students')}
-            className={`w-full flex items-center justify-between px-3.5 py-3 rounded-2xl transition-all duration-300 font-medium text-xs ${
-              activeFolder === 'students' 
-                ? 'bg-gradient-to-r from-purple-500/10 to-pink-500/10 text-pink-400 border-l-[3px] border-pink-500 border border-white/5' 
-                : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
-            }`}
-          >
-            <div className="flex items-center gap-3">
-              <User className="w-[17px] h-[17px] shrink-0" />
-              <span>Lista de Alunos</span>
-            </div>
-            <span className="px-2 py-0.5 bg-slate-800 text-slate-400 text-[10px] font-bold rounded-full">{students.length}</span>
-          </button>
-
-          {/* Seção Turmas */}
-          <div className="pt-6">
-            <span className="px-3 text-[10px] font-black uppercase text-slate-500 tracking-wider block mb-2">Turmas ativas</span>
-            <div className="space-y-1">
-              <div className="flex items-center justify-between px-3.5 py-2.5 text-[11px] text-slate-400 font-semibold hover:text-slate-200 cursor-pointer rounded-xl hover:bg-white/5">
-                <span className="flex items-center gap-2">📂 Turma A - 3º Ano</span>
-                <span className="text-[10px] px-1.5 py-0.5 bg-slate-800 text-slate-400 rounded font-bold">12</span>
-              </div>
-              <div className="flex items-center justify-between px-3.5 py-2.5 text-[11px] text-slate-400 font-semibold hover:text-slate-200 cursor-pointer rounded-xl hover:bg-white/5">
-                <span className="flex items-center gap-2">📂 Turma B - 4º Ano</span>
-                <span className="text-[10px] px-1.5 py-0.5 bg-slate-800 text-slate-400 rounded font-bold">8</span>
-              </div>
-            </div>
-          </div>
-        </nav>
-
-        {/* Footer Sidebar (Voltar e Sair) */}
-        <div className="p-4 border-t border-white/5 space-y-2">
-          <a
-            href="/"
-            className="w-full py-2.5 rounded-xl border border-white/10 flex items-center justify-center gap-2 font-bold text-xs bg-white/5 hover:bg-white/10 active:scale-95 transition-all text-white"
-          >
-            📋 Layout Clássico
-          </a>
-          
-          <button
-            onClick={onLogout}
-            className="w-full py-2.5 rounded-xl flex items-center justify-center gap-2 font-bold text-xs bg-red-950/20 hover:bg-red-950/40 border border-red-900/30 text-red-400 active:scale-95 transition-all cursor-pointer"
-          >
-            <LogOut className="w-4 h-4" />
-            <span>Sair do Sistema</span>
-          </button>
-        </div>
-      </aside>
-
-      {/* 2. COLUNA: INBOX / LISTA DE CARDS (Onde listamos submissões, tarefas, etc.) */}
-      <section className="w-[380px] bg-[#090a14]/95 border-r border-white/5 flex flex-col shrink-0 relative z-10">
+        {/* ==================================================== */}
+        {/* 1. COLUNA: SIDEBAR ESQUERDO                          */}
+        {/* ==================================================== */}
         
-        {/* Barra superior de Busca */}
-        <div className="p-5 border-b border-white/5 flex flex-col gap-4">
-          <div className="relative flex items-center w-full group">
-            <Search className="w-4.5 h-4.5 absolute left-4 text-slate-500 group-focus-within:text-pink-400 transition-colors" />
-            <input 
-              type="text" 
-              placeholder={`Buscar em ${activeFolder === 'inbox' ? 'submissões' : activeFolder === 'accessKeys' ? 'chaves' : activeFolder === 'tasks' ? 'tarefas' : 'logs'}...`}
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-[#121325]/80 border border-white/5 py-2.5 pl-11 pr-4 rounded-2xl text-xs text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500/50 transition-all font-medium"
-            />
+        {/* Desktop Sidebar */}
+        <aside className="w-64 flex-shrink-0 bg-white border-r border-gray-100 hidden lg:flex flex-col p-6 justify-between">
+          <div className="space-y-8 flex-1">
+            {/* Logo */}
+            <div className="flex items-center gap-3 px-2">
+              <div className="w-10 h-10 bg-[#635bfc] rounded-xl flex items-center justify-center text-white shadow-md">
+                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"></path>
+                </svg>
+              </div>
+              <span className="text-xl font-black text-gray-800 tracking-tight">Abba Digital</span>
+            </div>
+
+            {/* Navegação */}
+            <nav className="space-y-6">
+              <div>
+                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3 px-2">Geral</p>
+                <ul className="space-y-1">
+                  <li>
+                    <button 
+                      onClick={() => setActiveFolder('inbox')}
+                      className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-all text-left border-none cursor-pointer ${
+                        activeFolder === 'inbox' 
+                          ? 'bg-[#635bfc]/10 text-[#635bfc]' 
+                          : 'text-gray-500 bg-transparent hover:bg-gray-50 hover:text-gray-800'
+                      }`}
+                    >
+                      <FileText className="w-4 h-4 shrink-0" />
+                      <span>Submissões</span>
+                    </button>
+                  </li>
+                  <li>
+                    <button 
+                      onClick={() => setActiveFolder('students')}
+                      className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-all text-left border-none cursor-pointer ${
+                        activeFolder === 'students' 
+                          ? 'bg-[#635bfc]/10 text-[#635bfc]' 
+                          : 'text-gray-500 bg-transparent hover:bg-gray-50 hover:text-gray-800'
+                      }`}
+                    >
+                      <User className="w-4 h-4 shrink-0" />
+                      <span>Lista de Alunos</span>
+                    </button>
+                  </li>
+                  <li>
+                    <button 
+                      onClick={() => setActiveFolder('accessKeys')}
+                      className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-all text-left border-none cursor-pointer ${
+                        activeFolder === 'accessKeys' 
+                          ? 'bg-[#635bfc]/10 text-[#635bfc]' 
+                          : 'text-gray-500 bg-transparent hover:bg-gray-50 hover:text-gray-800'
+                      }`}
+                    >
+                      <Key className="w-4 h-4 shrink-0" />
+                      <span>Chaves de Acesso</span>
+                    </button>
+                  </li>
+                  <li>
+                    <button 
+                      onClick={() => setActiveFolder('logs')}
+                      className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-all text-left border-none cursor-pointer ${
+                        activeFolder === 'logs' 
+                          ? 'bg-[#635bfc]/10 text-[#635bfc]' 
+                          : 'text-gray-500 bg-transparent hover:bg-gray-50 hover:text-gray-800'
+                      }`}
+                    >
+                      <History className="w-4 h-4 shrink-0" />
+                      <span>Registro de Ações</span>
+                    </button>
+                  </li>
+                  <li>
+                    <button 
+                      onClick={() => setActiveFolder('tasks')}
+                      className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-all text-left border-none cursor-pointer ${
+                        activeFolder === 'tasks' 
+                          ? 'bg-[#635bfc]/10 text-[#635bfc]' 
+                          : 'text-gray-500 bg-transparent hover:bg-gray-50 hover:text-gray-800'
+                      }`}
+                    >
+                      <BookOpen className="w-4 h-4 shrink-0" />
+                      <span>Tarefas Criadas</span>
+                    </button>
+                  </li>
+                </ul>
+              </div>
+
+              <div>
+                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3 px-2">Ações Rápidas</p>
+                <ul className="space-y-2">
+                  <li>
+                    <button
+                      onClick={() => {
+                        setGeneratedLinkInfo(null);
+                        setIsLinkModalOpen(true);
+                      }}
+                      className="w-full py-2.5 bg-[#635bfc] hover:bg-[#4f46e5] text-white rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-sm shadow-[#635bfc]/20 border-none"
+                    >
+                      <Plus className="w-4 h-4" />
+                      <span>Gerar Convite</span>
+                    </button>
+                  </li>
+                  <li>
+                    <button
+                      onClick={() => setIsTaskModalOpen(true)}
+                      className="w-full py-2.5 bg-brand-light text-brand hover:bg-brand/10 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer border border-[#635bfc]/15"
+                    >
+                      <BookOpen className="w-4 h-4" />
+                      <span>Criar Tarefa</span>
+                    </button>
+                  </li>
+                </ul>
+              </div>
+            </nav>
           </div>
 
-          {/* Abas de filtro rápidas (apenas se for inbox/submissões) */}
-          {activeFolder === 'inbox' && (
-            <div className="flex bg-[#121325]/85 border border-white/5 p-1 rounded-2xl">
-              <button
-                onClick={() => setFilterType('all')}
-                className={`flex-1 py-1.5 rounded-xl font-bold text-[10px] transition-all cursor-pointer ${
-                  filterType === 'all' ? 'bg-[#1a1b35] text-white shadow-xs' : 'text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                Todas
-              </button>
-              <button
-                onClick={() => setFilterType('pending')}
-                className={`flex-1 py-1.5 rounded-xl font-bold text-[10px] transition-all cursor-pointer ${
-                  filterType === 'pending' ? 'bg-[#1a1b35] text-white shadow-xs' : 'text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                Pendentes
-              </button>
-              <button
-                onClick={() => setFilterType('evaluated')}
-                className={`flex-1 py-1.5 rounded-xl font-bold text-[10px] transition-all cursor-pointer ${
-                  filterType === 'evaluated' ? 'bg-[#1a1b35] text-white shadow-xs' : 'text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                Corrigidas
-              </button>
-            </div>
-          )}
-        </div>
+          {/* Ajustes e Sair */}
+          <div className="pt-6 border-t border-gray-100 space-y-1.5">
+            <a 
+              href="/"
+              className="flex items-center gap-3 px-3 py-2.5 text-gray-500 hover:bg-gray-50 rounded-xl text-xs font-bold transition-colors no-underline"
+            >
+              📋 Layout Clássico
+            </a>
+            <button 
+              onClick={onLogout}
+              className="w-full flex items-center gap-3 px-3 py-2.5 text-red-500 hover:bg-red-50 rounded-xl text-xs font-bold transition-colors text-left border-none bg-transparent cursor-pointer"
+            >
+              <LogOut className="w-4 h-4 shrink-0" />
+              <span>Sair do Sistema</span>
+            </button>
+          </div>
+        </aside>
 
-        {/* Corpo da Lista */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-3.5 custom-scrollbar">
-          
-          {isLoading ? (
-            <div className="flex flex-col items-center justify-center py-20 text-slate-500 gap-3">
-              <div className="w-6 h-6 border-2 border-pink-500 border-t-transparent rounded-full animate-spin" />
-              <span className="text-[11px] font-bold tracking-wider uppercase">Sincronizando Banco...</span>
-            </div>
-          ) : (
+        {/* Mobile Left Sidebar overlay drawer */}
+        <AnimatePresence>
+          {isMobileSidebarOpen && (
             <>
-              {/* CASO A: FOLDER SUBMISSÕES (INBOX) */}
-              {activeFolder === 'inbox' && (
-                filteredSubmissions.length === 0 ? (
-                  <div className="text-center py-20 text-slate-500 italic text-xs">
-                    Nenhuma submissão encontrada.
+              {/* Tap backdrop to close */}
+              <motion.div 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 0.3 }}
+                exit={{ opacity: 0 }}
+                onClick={() => setIsMobileSidebarOpen(false)}
+                className="fixed inset-0 bg-black z-40 lg:hidden"
+              />
+              {/* Drawer Container */}
+              <motion.aside 
+                initial={{ x: '-100%' }}
+                animate={{ x: 0 }}
+                exit={{ x: '-100%' }}
+                transition={{ type: 'spring', damping: 25, stiffness: 220 }}
+                className="fixed inset-y-0 left-0 w-64 bg-white z-50 p-6 flex flex-col justify-between shadow-2xl lg:hidden"
+              >
+                <div className="space-y-8 flex-1">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-[#635bfc] rounded-xl flex items-center justify-center text-white shadow-md">
+                        <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"></path>
+                        </svg>
+                      </div>
+                      <span className="text-xl font-black text-gray-800 tracking-tight">Abba Digital</span>
+                    </div>
+                    <button onClick={() => setIsMobileSidebarOpen(false)} className="p-1 rounded-lg hover:bg-gray-100 border-none bg-transparent cursor-pointer">
+                      <X className="w-5 h-5 text-gray-500" />
+                    </button>
                   </div>
-                ) : (
-                  filteredSubmissions.map((sub) => {
-                    const langDetails = getLanguageDetails(sub.taskTitle);
-                    const isSelected = sub.id === selectedSubmissionId;
-                    return (
-                      <motion.div
-                        key={`sub-${sub.id}`}
-                        onClick={() => setSelectedSubmissionId(sub.id)}
-                        whileHover={{ scale: 1.01 }}
-                        whileTap={{ scale: 0.99 }}
-                        className={`p-4 rounded-3xl border cursor-pointer transition-all duration-300 text-left relative overflow-hidden group ${
-                          isSelected 
-                            ? 'bg-[#121327] border-purple-500/40 shadow-[0_8px_30px_rgb(168,85,247,0.06)]' 
-                            : 'bg-[#131526]/40 border-white/5 hover:border-white/10 hover:bg-[#131526]/60'
+
+                  <nav className="space-y-6">
+                    <div>
+                      <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3 px-2">Geral</p>
+                      <ul className="space-y-1">
+                        <li>
+                          <button 
+                            onClick={() => { setActiveFolder('inbox'); setIsMobileSidebarOpen(false); }}
+                            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-all text-left border-none cursor-pointer ${
+                              activeFolder === 'inbox' ? 'bg-[#635bfc]/10 text-[#635bfc]' : 'text-gray-500 bg-transparent'
+                            }`}
+                          >
+                            <FileText className="w-4 h-4 shrink-0" />
+                            <span>Submissões</span>
+                          </button>
+                        </li>
+                        <li>
+                          <button 
+                            onClick={() => { setActiveFolder('students'); setIsMobileSidebarOpen(false); }}
+                            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-all text-left border-none cursor-pointer ${
+                              activeFolder === 'students' ? 'bg-[#635bfc]/10 text-[#635bfc]' : 'text-gray-500 bg-transparent'
+                            }`}
+                          >
+                            <User className="w-4 h-4 shrink-0" />
+                            <span>Lista de Alunos</span>
+                          </button>
+                        </li>
+                        <li>
+                          <button 
+                            onClick={() => { setActiveFolder('accessKeys'); setIsMobileSidebarOpen(false); }}
+                            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-all text-left border-none cursor-pointer ${
+                              activeFolder === 'accessKeys' ? 'bg-[#635bfc]/10 text-[#635bfc]' : 'text-gray-500 bg-transparent'
+                            }`}
+                          >
+                            <Key className="w-4 h-4 shrink-0" />
+                            <span>Chaves de Acesso</span>
+                          </button>
+                        </li>
+                        <li>
+                          <button 
+                            onClick={() => { setActiveFolder('logs'); setIsMobileSidebarOpen(false); }}
+                            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-all text-left border-none cursor-pointer ${
+                              activeFolder === 'logs' ? 'bg-[#635bfc]/10 text-[#635bfc]' : 'text-gray-500 bg-transparent'
+                            }`}
+                          >
+                            <History className="w-4 h-4 shrink-0" />
+                            <span>Registro de Ações</span>
+                          </button>
+                        </li>
+                        <li>
+                          <button 
+                            onClick={() => { setActiveFolder('tasks'); setIsMobileSidebarOpen(false); }}
+                            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-all text-left border-none cursor-pointer ${
+                              activeFolder === 'tasks' ? 'bg-[#635bfc]/10 text-[#635bfc]' : 'text-gray-500 bg-transparent'
+                            }`}
+                          >
+                            <BookOpen className="w-4 h-4 shrink-0" />
+                            <span>Tarefas Criadas</span>
+                          </button>
+                        </li>
+                      </ul>
+                    </div>
+
+                    <div>
+                      <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3 px-2">Ações Rápidas</p>
+                      <ul className="space-y-2">
+                        <li>
+                          <button
+                            onClick={() => {
+                              setIsMobileSidebarOpen(false);
+                              setGeneratedLinkInfo(null);
+                              setIsLinkModalOpen(true);
+                            }}
+                            className="w-full py-2.5 bg-[#635bfc] text-white rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-sm border-none"
+                          >
+                            <Plus className="w-4 h-4" />
+                            <span>Gerar Convite</span>
+                          </button>
+                        </li>
+                        <li>
+                          <button
+                            onClick={() => {
+                              setIsMobileSidebarOpen(false);
+                              setIsTaskModalOpen(true);
+                            }}
+                            className="w-full py-2.5 bg-brand-light text-brand rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer border border-[#635bfc]/15"
+                          >
+                            <BookOpen className="w-4 h-4" />
+                            <span>Criar Tarefa</span>
+                          </button>
+                        </li>
+                      </ul>
+                    </div>
+                  </nav>
+                </div>
+
+                <div className="pt-6 border-t border-gray-100 space-y-1.5">
+                  <a 
+                    href="/"
+                    className="flex items-center gap-3 px-3 py-2.5 text-gray-500 rounded-xl text-xs font-bold transition-colors no-underline"
+                  >
+                    📋 Layout Clássico
+                  </a>
+                  <button 
+                    onClick={onLogout}
+                    className="w-full flex items-center gap-3 px-3 py-2.5 text-red-500 hover:bg-red-50 rounded-xl text-xs font-bold transition-colors text-left border-none bg-transparent cursor-pointer"
+                  >
+                    <LogOut className="w-4 h-4 shrink-0" />
+                    <span>Sair</span>
+                  </button>
+                </div>
+              </motion.aside>
+            </>
+          )}
+        </AnimatePresence>
+
+        {/* ==================================================== */}
+        {/* 2. ÁREA CENTRAL DE CONTEÚDO                          */}
+        {/* ==================================================== */}
+        <div className="flex-grow flex flex-col overflow-y-auto scrollbar-hide bg-[#f8fafc] w-full min-w-0">
+          
+          {/* Header Superior */}
+          <header className="flex items-center justify-between p-4 md:p-6 bg-[#f8fafc] sticky top-0 z-20 border-b border-gray-50 flex-shrink-0">
+            <div className="flex items-center gap-2">
+              {/* Mobile hamburger toggle button */}
+              <button 
+                onClick={() => setIsMobileSidebarOpen(true)}
+                className="p-2 bg-white rounded-full shadow-sm text-gray-500 hover:text-brand transition-colors border border-gray-100 lg:hidden cursor-pointer"
+              >
+                <Menu className="w-5 h-5" />
+              </button>
+
+              {/* Barra de Pesquisa */}
+              <div className="relative w-full max-w-[200px] sm:max-w-md">
+                <input 
+                  type="text"
+                  placeholder={`Buscar em ${
+                    activeFolder === 'inbox' ? 'submissões' : 
+                    activeFolder === 'students' ? 'alunos' : 
+                    activeFolder === 'accessKeys' ? 'chaves' : 
+                    activeFolder === 'tasks' ? 'tarefas' : 'logs'
+                  }...`}
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full pl-9 pr-4 py-2 bg-white border border-gray-200/60 rounded-full shadow-sm text-xs focus:outline-none focus:ring-2 focus:ring-[#635bfc] focus:border-transparent transition-all font-medium text-gray-700 placeholder:text-gray-400"
+                />
+                <Search className="w-4.5 h-4.5 absolute left-3 top-2.5 text-gray-400" />
+              </div>
+            </div>
+
+            {/* Ações e Avatar do Perfil */}
+            <div className="flex items-center gap-2.5 sm:gap-4 shrink-0">
+              <button className="p-2 bg-white rounded-full shadow-sm text-gray-500 hover:text-brand transition-colors border border-gray-100 cursor-pointer">
+                <Bell className="w-4 h-4" />
+              </button>
+              
+              {/* Mobile Stats Toggle button */}
+              <button 
+                onClick={() => setIsMobileStatsOpen(true)}
+                className="p-2 bg-white rounded-full shadow-sm text-gray-500 hover:text-brand transition-colors border border-gray-100 lg:hidden cursor-pointer"
+              >
+                <Activity className="w-4 h-4" />
+              </button>
+
+              <div className="flex items-center gap-2 p-1 pr-3 bg-white rounded-full shadow-sm border border-gray-100 hover:shadow-md transition-all group shrink-0">
+                <img 
+                  alt="Perfil do Professor" 
+                  className="w-8 h-8 rounded-full border-2 border-brand/20 group-hover:border-brand transition-colors object-cover" 
+                  src="https://res.cloudinary.com/dudmozd8z/image/upload/v1779573141/clipboard-image-1779573127_oef0qy.avif"
+                />
+                <span className="text-xs font-bold text-gray-700 hidden sm:inline">&nbsp;{user.name.split(' ')[0]}</span>
+              </div>
+            </div>
+          </header>
+
+          {/* Área de Visualização Principal */}
+          <div className="p-4 md:p-6 space-y-6 md:space-y-8 flex-1">
+            
+            {/* HERO BANNER & STATS GRIDS - Apenas se estiver no inbox (Dashboard) */}
+            {activeFolder === 'inbox' && (
+              <>
+                {/* Hero Banner */}
+                <section className="relative rounded-3xl p-6 md:p-8 flex flex-col justify-center overflow-hidden bg-gradient-to-r from-brand/5 to-purple-600/5 border border-brand/10 relative overflow-hidden animate-fade-in-up">
+                  <div className="absolute top-0 right-0 w-48 h-48 bg-brand/10 rounded-full blur-3xl" />
+                  <div className="relative z-10 max-w-lg text-left">
+                    <h1 className="text-2xl md:text-3xl font-black mb-2 text-gray-800 leading-tight">
+                      Bem-vindo de volta,<br className="hidden sm:inline" />
+                      <span className="text-[#635bfc]">Professor {user.name.split(' ')[0]}!</span>
+                    </h1>
+                    <p className="text-xs text-gray-500 font-semibold mb-5 leading-relaxed">
+                      Acompanhe o aprendizado tridimensional do ábaco e impulsione as lições em tempo real.
+                    </p>
+                    <button 
+                      onClick={() => setIsTaskModalOpen(true)}
+                      className="bg-white text-brand px-5 py-2.5 rounded-full font-extrabold text-xs flex items-center gap-2 hover:shadow-md transition-all border border-gray-200/80 cursor-pointer w-fit"
+                    >
+                      Criar Nova Lição
+                      <div className="bg-brand text-white rounded-full p-0.5">
+                        <Plus className="w-3 h-3" />
+                      </div>
+                    </button>
+                  </div>
+                </section>
+
+                {/* Category Progress Snap Cards */}
+                <section className="flex overflow-x-auto scrollbar-hide pb-2 gap-4 snap-x snap-mandatory scroll-smooth w-full">
+                  
+                  {/* Card 1: Submissões */}
+                  <div className="bg-white p-4 rounded-3xl shadow-sm border border-gray-100/60 flex items-center gap-3.5 min-w-[240px] flex-1 snap-start transition-all duration-300 hover:shadow-md animate-fade-in-up">
+                    <div className="w-11 h-11 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center font-bold text-lg border border-blue-100">
+                      <FileText className="w-5 h-5" />
+                    </div>
+                    <div className="flex-grow text-left">
+                      <p className="text-[10px] text-gray-400 font-bold uppercase">{submissions.length} Realizadas</p>
+                      <h3 className="text-sm font-bold text-gray-800">Submissões</h3>
+                    </div>
+                  </div>
+
+                  {/* Card 2: Alunos Ativos */}
+                  <div className="bg-white p-4 rounded-3xl shadow-sm border border-gray-100/60 flex items-center gap-3.5 min-w-[240px] flex-1 snap-start transition-all duration-300 hover:shadow-md animate-fade-in-up [animation-delay:0.1s]">
+                    <div className="w-11 h-11 bg-pink-50 text-pink-600 rounded-2xl flex items-center justify-center font-bold text-lg border border-pink-100">
+                      <User className="w-5 h-5" />
+                    </div>
+                    <div className="flex-grow text-left">
+                      <p className="text-[10px] text-gray-400 font-bold uppercase">{students.length} Cadastrados</p>
+                      <h3 className="text-sm font-bold text-gray-800">Alunos Ativos</h3>
+                    </div>
+                  </div>
+
+                  {/* Card 3: Chaves geradas */}
+                  <div className="bg-white p-4 rounded-3xl shadow-sm border border-gray-100/60 flex items-center gap-3.5 min-w-[240px] flex-1 snap-start transition-all duration-300 hover:shadow-md animate-fade-in-up [animation-delay:0.2s]">
+                    <div className="w-11 h-11 bg-cyan-50 text-cyan-600 rounded-2xl flex items-center justify-center font-bold text-lg border border-cyan-100">
+                      <Key className="w-5 h-5" />
+                    </div>
+                    <div className="flex-grow text-left">
+                      <p className="text-[10px] text-gray-400 font-bold uppercase">{activeCodes.length} Em andamento</p>
+                      <h3 className="text-sm font-bold text-gray-800">Convites</h3>
+                    </div>
+                  </div>
+
+                  {/* Card 4: Tarefas criadas */}
+                  <div className="bg-white p-4 rounded-3xl shadow-sm border border-gray-100/60 flex items-center gap-3.5 min-w-[240px] flex-1 snap-start transition-all duration-300 hover:shadow-md animate-fade-in-up [animation-delay:0.3s]">
+                    <div className="w-11 h-11 bg-purple-50 text-purple-600 rounded-2xl flex items-center justify-center font-bold text-lg border border-purple-100">
+                      <BookOpen className="w-5 h-5" />
+                    </div>
+                    <div className="flex-grow text-left">
+                      <p className="text-[10px] text-gray-400 font-bold uppercase">{tasks.length} Ativas</p>
+                      <h3 className="text-sm font-bold text-gray-800">Lições Totais</h3>
+                    </div>
+                  </div>
+                </section>
+              </>
+            )}
+
+            {/* DYNAMIC CONTENT VIEWS BY TABS */}
+            
+            {/* VIEW A: SUBMISSÕES (DASHBOARD) */}
+            {activeFolder === 'inbox' && (
+              <section className="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start">
+                
+                {/* Inbox Left list */}
+                <div className="xl:col-span-5 bg-white rounded-3xl border border-gray-100 shadow-sm p-4 space-y-4 text-left min-h-[400px]">
+                  <div className="flex items-center justify-between px-2 pb-2 border-b border-gray-50">
+                    <h2 className="text-base font-bold text-gray-800 flex items-center gap-2">
+                      <span>Inbox do Professor</span>
+                      <span className="px-2 py-0.5 bg-[#635bfc]/10 text-[#635bfc] text-[10px] rounded-full font-bold">{filteredSubmissions.length}</span>
+                    </h2>
+                    
+                    {/* Inbox small filters */}
+                    <div className="flex gap-1.5">
+                      <button 
+                        onClick={() => setFilterType('all')} 
+                        className={`text-[9px] font-black px-2.5 py-1 rounded-lg transition-all border border-gray-200 cursor-pointer ${
+                          filterType === 'all' ? 'bg-[#635bfc] text-white border-transparent' : 'bg-transparent text-gray-500 hover:bg-gray-50'
                         }`}
                       >
-                        {/* Indicador Ativo Lateral */}
-                        {isSelected && (
-                          <div className="absolute top-0 bottom-0 left-0 w-1 bg-gradient-to-b from-purple-500 to-pink-500" />
-                        )}
-                        
-                        <div className="flex justify-between items-start gap-2 mb-2">
-                          <span className="font-extrabold text-[13px] text-white truncate max-w-[70%] group-hover:text-pink-400 transition-colors">
-                            {sub.studentName}
-                          </span>
-                          <span className="text-[10px] text-slate-500 font-bold shrink-0">
-                            {new Date(sub.submittedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                          </span>
-                        </div>
-
-                        <p className="text-[11px] text-slate-400 font-semibold truncate mb-3">
-                          {sub.taskTitle}
-                        </p>
-
-                        <div className="flex justify-between items-center mt-2.5">
-                          {/* Tag de Idioma Degradê */}
-                          <span className={`px-2.5 py-1 text-[9px] font-black rounded-lg bg-gradient-to-r shadow-xs ${langDetails.colorClass}`}>
-                            {langDetails.label}
-                          </span>
-
-                          <span className="text-[10px] text-slate-500 font-semibold italic flex items-center gap-1">
-                            {sub.spelledWords.length} palavras
-                            <ChevronRight className="w-3.5 h-3.5" />
-                          </span>
-                        </div>
-                      </motion.div>
-                    );
-                  })
-                )
-              )}
-
-              {/* CASO B: FOLDER CHAVES DE ACESSO */}
-              {activeFolder === 'accessKeys' && (
-                activeCodes.length === 0 ? (
-                  <div className="text-center py-20 text-slate-500 italic text-xs">
-                    Nenhuma chave de acesso ativa.
-                  </div>
-                ) : (
-                  activeCodes
-                    .filter(c => c.studentName.toLowerCase().includes(searchQuery.toLowerCase()))
-                    .map((item) => (
-                      <div 
-                        key={item.id}
-                        className="p-4 rounded-3xl bg-[#131526]/40 border border-white/5 text-left flex flex-col justify-between"
+                        TUDO
+                      </button>
+                      <button 
+                        onClick={() => setFilterType('evaluated')} 
+                        className={`text-[9px] font-black px-2.5 py-1 rounded-lg transition-all border border-gray-200 cursor-pointer ${
+                          filterType === 'evaluated' ? 'bg-[#635bfc] text-white border-transparent' : 'bg-transparent text-gray-500 hover:bg-gray-50'
+                        }`}
                       >
-                        <div className="flex justify-between items-start gap-2 mb-2">
-                          <div>
-                            <p className="font-extrabold text-[13px] text-white">{item.studentName}</p>
-                            <p className="text-[10px] text-pink-400 font-mono tracking-widest font-bold mt-1">ABBA-{item.code}</p>
-                          </div>
-                          <button
-                            onClick={() => handleDeleteLink(item.code)}
-                            className="p-1.5 hover:bg-red-500/10 text-red-400 rounded-lg hover:text-red-300 transition-colors"
-                            title="Apagar chave"
+                        AVALIADAS
+                      </button>
+                    </div>
+                  </div>
+
+                  {isLoading ? (
+                    <div className="flex flex-col items-center justify-center py-20 text-gray-400 gap-2">
+                      <div className="w-5 h-5 border-2 border-brand border-t-transparent rounded-full animate-spin" />
+                      <span className="text-[10px] font-bold uppercase tracking-wider">Buscando do Supabase...</span>
+                    </div>
+                  ) : filteredSubmissions.length === 0 ? (
+                    <div className="py-20 text-center text-gray-400 text-xs italic">
+                      Nenhuma submissão encontrada.
+                    </div>
+                  ) : (
+                    <div className="space-y-2 max-h-[500px] overflow-y-auto pr-1">
+                      {filteredSubmissions.map((sub) => {
+                        const isSelected = sub.id === selectedSubmissionId;
+                        const langDetails = getLanguageDetails(sub.taskTitle);
+                        return (
+                          <div
+                            key={`sub-${sub.id}`}
+                            onClick={() => setSelectedSubmissionId(sub.id)}
+                            className={`p-3.5 rounded-2xl border transition-all duration-300 text-left relative overflow-hidden cursor-pointer ${
+                              isSelected 
+                                ? 'bg-[#635bfc]/5 border-[#635bfc]/30 shadow-sm' 
+                                : 'bg-[#f8fafc]/50 border-gray-100 hover:bg-white hover:border-gray-200'
+                            }`}
                           >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                        <div className="flex justify-between items-center text-[10px] text-slate-500 font-semibold mt-3 pt-2 border-t border-white/5">
-                          <span>Duração: {item.durationLabel}</span>
-                          <span className="text-emerald-400 font-bold">Ativo ✓</span>
-                        </div>
-                      </div>
-                    ))
-                )
-              )}
-
-              {/* CASO C: FOLDER LOGS DE AÇÕES */}
-              {activeFolder === 'logs' && (
-                actionLogs.length === 0 ? (
-                  <div className="text-center py-20 text-slate-500 italic text-xs">
-                    Nenhum log registrado.
-                  </div>
-                ) : (
-                  actionLogs
-                    .filter(l => l.student_name.toLowerCase().includes(searchQuery.toLowerCase()) || l.action_type.toLowerCase().includes(searchQuery.toLowerCase()))
-                    .map((log) => (
-                      <div 
-                        key={log.id} 
-                        className="p-3.5 rounded-2xl bg-[#131526]/30 border border-white/5 text-left flex flex-col gap-1"
-                      >
-                        <div className="flex justify-between items-center">
-                          <span className="font-extrabold text-[12px] text-white">{log.student_name}</span>
-                          <span className="text-[9px] text-slate-500 font-semibold">
-                            {new Date(log.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                          </span>
-                        </div>
-                        <span className="text-[10px] font-bold text-cyan-400 uppercase tracking-wide">
-                          {log.action_type}
-                        </span>
-                        <p className="text-[10px] text-slate-400 leading-normal bg-black/20 p-2 rounded-lg mt-1 font-mono break-words max-h-24 overflow-y-auto">
-                          {JSON.stringify(log.action_details)}
-                        </p>
-                      </div>
-                    ))
-                )
-              )}
-
-              {/* CASO D: FOLDER TAREFAS */}
-              {activeFolder === 'tasks' && (
-                tasks.length === 0 ? (
-                  <div className="text-center py-20 text-slate-500 italic text-xs">
-                    Nenhuma tarefa criada.
-                  </div>
-                ) : (
-                  tasks
-                    .filter(t => t.title.toLowerCase().includes(searchQuery.toLowerCase()))
-                    .map((task) => (
-                      <div 
-                        key={task.id}
-                        className="p-4 rounded-3xl bg-[#131526]/40 border border-white/5 text-left flex flex-col justify-between"
-                      >
-                        <div>
-                          <div className="flex justify-between items-start mb-2">
-                            <span className="font-extrabold text-[13px] text-white truncate max-w-[80%]">{task.title}</span>
-                            <span className={`px-2 py-0.5 text-[8px] font-bold rounded ${
-                              task.priority === 'Alta' ? 'bg-red-500/10 text-red-400' : task.priority === 'Média' ? 'bg-amber-500/10 text-amber-400' : 'bg-green-500/10 text-green-400'
-                            }`}>
-                              {task.priority}
-                            </span>
-                          </div>
-                          <p className="text-[10px] text-slate-400 leading-relaxed truncate">{task.description}</p>
-                          
-                          {/* Palavras-alvo */}
-                          <div className="flex flex-wrap gap-1 mt-3">
-                            {task.targetWords.map((w, i) => (
-                              <span key={i} className="px-1.5 py-0.5 bg-[#121325] text-slate-300 rounded font-mono text-[9px] border border-white/5">
-                                {w.word}
+                            <div className="flex justify-between items-start gap-2 mb-1">
+                              <span className="font-extrabold text-[13px] text-gray-800 truncate max-w-[70%]">
+                                {sub.studentName}
                               </span>
-                            ))}
-                          </div>
-                        </div>
-
-                        <div className="flex justify-between items-center text-[10px] text-slate-500 font-semibold mt-4 pt-2 border-t border-white/5">
-                          <span>Entrega: {task.dueDate}</span>
-                          <span className="text-pink-400 uppercase tracking-widest text-[8px] font-black">{task.targetWords[0]?.language || 'pt'}</span>
-                        </div>
-                      </div>
-                    ))
-                )
-              )}
-
-              {/* CASO E: FOLDER LISTA DE ALUNOS */}
-              {activeFolder === 'students' && (
-                students.length === 0 ? (
-                  <div className="text-center py-20 text-slate-500 italic text-xs">
-                    Nenhum aluno cadastrado.
-                  </div>
-                ) : (
-                  students
-                    .filter(s => s.name.toLowerCase().includes(searchQuery.toLowerCase()))
-                    .map((s) => {
-                      const isSelected = s.id === selectedStudentId;
-                      return (
-                        <motion.div
-                          key={`student-${s.id}`}
-                          onClick={() => setSelectedStudentId(s.id)}
-                          whileHover={{ scale: 1.01 }}
-                          whileTap={{ scale: 0.99 }}
-                          className={`p-4 rounded-3xl border cursor-pointer transition-all duration-300 text-left relative overflow-hidden group ${
-                            isSelected 
-                              ? 'bg-[#121327] border-purple-500/40 shadow-[0_8px_30px_rgb(168,85,247,0.06)]' 
-                              : 'bg-[#131526]/40 border-white/5 hover:border-white/10 hover:bg-[#131526]/60'
-                          }`}
-                        >
-                          {/* Indicador Ativo Lateral */}
-                          {isSelected && (
-                            <div className="absolute top-0 bottom-0 left-0 w-1 bg-gradient-to-b from-purple-500 to-pink-500" />
-                          )}
-                          
-                          <div className="flex gap-3 items-center">
-                            <img src={s.img} alt={s.name} className="w-10 h-10 rounded-full object-cover border border-white/10" />
-                            <div className="overflow-hidden flex-1">
-                              <span className="font-extrabold text-[13px] text-white truncate block group-hover:text-pink-400 transition-colors">
-                                {s.name}
-                              </span>
-                              <span className="text-[10px] text-slate-400 font-semibold block mt-0.5">
-                                {s.class}
+                              <span className="text-[9px] text-gray-400 font-bold shrink-0">
+                                {new Date(sub.submittedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                               </span>
                             </div>
                             
-                            <button
-                              onClick={async (e) => {
-                                e.stopPropagation();
-                                if (confirm(`Tem certeza de que deseja excluir permanentemente o aluno ${s.name}?`)) {
-                                  try {
-                                    const { error } = await supabase.from('students').delete().eq('id', s.id);
-                                    if (error) throw error;
-                                    setStudents(prev => prev.filter(student => student.id !== s.id));
-                                    alert('Aluno excluído com sucesso! 🗑️');
-                                    if (selectedStudentId === s.id) {
-                                      setSelectedStudentId(null);
+                            <p className="text-[11px] text-gray-500 font-semibold truncate mb-3">
+                              {sub.taskTitle}
+                            </p>
+
+                            <div className="flex justify-between items-center">
+                              <span className={`px-2 py-0.5 text-[8px] font-black rounded-md ${langDetails.colorClass}`}>
+                                #{langDetails.label}
+                              </span>
+                              <span className="text-[9px] text-gray-400 font-bold flex items-center gap-0.5">
+                                {sub.spelledWords.length} palavras
+                                <ChevronRight className="w-3.5 h-3.5" />
+                              </span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+
+                {/* Inbox Right review pane */}
+                <div className="xl:col-span-7 bg-white rounded-3xl border border-gray-100 shadow-sm p-5 text-left min-h-[400px]">
+                  <AnimatePresence mode="wait">
+                    {!selectedSubmission ? (
+                      <div className="flex flex-col items-center justify-center py-24 text-center text-gray-400 gap-3">
+                        <Award className="w-12 h-12 text-brand/35 animate-bounce" />
+                        <div className="max-w-xs space-y-1">
+                          <h4 className="font-bold text-sm text-gray-800">Selecione uma Submissão</h4>
+                          <p className="text-[11px] text-gray-400">Selecione um card na lista ao lado para inspecionar os blocos construídos e auditar a soletragem no Ábaco 3D.</p>
+                        </div>
+                      </div>
+                    ) : (
+                      <motion.div
+                        key={`sub-detail-${selectedSubmission.id}`}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -10 }}
+                        className="space-y-5"
+                      >
+                        {/* Student Badge Card */}
+                        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3.5 p-4 bg-gray-50/50 rounded-2xl border border-gray-100 relative overflow-hidden">
+                          <div className="w-11 h-11 rounded-full bg-gradient-to-tr from-brand to-purple-500 text-white font-black text-sm flex items-center justify-center uppercase shadow-md shrink-0">
+                            {selectedSubmission.studentName.charAt(0)}
+                          </div>
+                          <div className="flex-grow min-w-0">
+                            <h3 className="font-extrabold text-sm text-gray-800 leading-tight truncate">{selectedSubmission.studentName}</h3>
+                            <p className="text-[10px] text-gray-400 font-semibold mt-0.5 truncate">
+                              E-mail: {selectedSubmission.studentEmail || `${selectedSubmission.studentName.toLowerCase().replace(' ', '')}@abba.com`}
+                            </p>
+                          </div>
+                          <span className="text-[10px] bg-emerald-50 text-emerald-600 border border-emerald-100 rounded-lg px-2.5 py-1 font-bold shrink-0">
+                            ✓ Entregue em {new Date(selectedSubmission.submittedAt).toLocaleDateString()}
+                          </span>
+                        </div>
+
+                        {/* Files Storage Attachments */}
+                        <div className="p-4 bg-white rounded-2xl border border-gray-100/80 space-y-3">
+                          <h4 className="text-xs font-black text-gray-800 tracking-wide uppercase border-b border-gray-50 pb-2">Arquivos Enviados</h4>
+                          {!selectedSubmission.taskFiles || selectedSubmission.taskFiles.length === 0 ? (
+                            <p className="text-[11px] text-gray-400 italic">Nenhum arquivo ou documento anexado a esta tarefa.</p>
+                          ) : (
+                            <div className="space-y-1.5">
+                              {selectedSubmission.taskFiles.map((file, i) => (
+                                <div key={i} className="flex justify-between items-center bg-gray-50/50 hover:bg-gray-50 py-2 px-3 rounded-xl border border-gray-100 transition-colors">
+                                  <span className="text-[11px] text-gray-600 font-semibold truncate max-w-[70%]">{file.name || 'Anexo'}</span>
+                                  <div className="flex gap-2">
+                                    <a 
+                                      href={file.url} 
+                                      target="_blank" 
+                                      rel="noreferrer" 
+                                      className="p-1 text-brand hover:bg-[#635bfc]/10 rounded-lg transition-all"
+                                      title="Visualizar"
+                                    >
+                                      <ExternalLink className="w-3.5 h-3.5" />
+                                    </a>
+                                    <a 
+                                      href={file.url} 
+                                      download 
+                                      className="p-1 text-gray-500 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-all"
+                                      title="Download"
+                                    >
+                                      <Download className="w-3.5 h-3.5" />
+                                    </a>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Words Spelled details */}
+                        <div className="p-4 bg-white rounded-2xl border border-gray-100/80 space-y-3">
+                          <h4 className="text-xs font-black text-gray-800 tracking-wide uppercase border-b border-gray-50 pb-2">Soletragem Tridimensional</h4>
+                          {selectedSubmission.spelledWords.length === 0 ? (
+                            <p className="text-[11px] text-gray-400 italic">Nenhum registro de palavra gravado no ábaco.</p>
+                          ) : (
+                            <div className="space-y-2.5 max-h-[220px] overflow-y-auto pr-1">
+                              {selectedSubmission.spelledWords.map((wordObj, i) => (
+                                <div key={i} className="flex justify-between items-center bg-gray-50/50 p-2.5 rounded-xl border border-gray-100">
+                                  <div className="flex flex-col gap-1.5 text-left flex-1 min-w-0">
+                                    <span className="text-[11px] font-black text-gray-800 tracking-wider">Palavra: "{wordObj.word}"</span>
+                                    <div className="flex flex-wrap gap-1">
+                                      {wordObj.letters.map((l: any, slotIdx: number) => (
+                                        <div 
+                                          key={slotIdx} 
+                                          className="w-6.5 h-6.5 rounded-lg border border-gray-200 flex items-center justify-center font-bold text-[10px] shrink-0 bg-white"
+                                          style={{
+                                            color: wordObj.themeColor || '#635bfc',
+                                            borderColor: wordObj.themeColor || '#635bfc'
+                                          }}
+                                        >
+                                          {l.letter}
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                  <span className="w-3 h-3 rounded-full shrink-0 border border-white shadow-sm" style={{ backgroundColor: wordObj.themeColor || '#635bfc' }} />
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Corrections & Launching Review Button */}
+                        <div className="pt-2">
+                          <button
+                            onClick={() => onLaunchReviewMode(selectedSubmission)}
+                            className="w-full py-3.5 bg-gradient-to-r from-brand to-purple-600 text-white rounded-2xl font-black text-xs shadow-md shadow-[#635bfc]/20 hover:shadow-lg hover:shadow-[#635bfc]/30 active:scale-[0.98] transition-all flex items-center justify-center gap-1.5 border-none cursor-pointer"
+                          >
+                            <Sparkles className="w-4 h-4 text-amber-300 animate-pulse" />
+                            <span>Iniciar Correção no Ábaco 3D Real 🔮</span>
+                          </button>
+                        </div>
+
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+
+              </section>
+            )}
+
+            {/* VIEW B: LISTA DE ALUNOS */}
+            {activeFolder === 'students' && (
+              <section className="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start text-left animate-fade-in-up">
+                
+                {/* Students directory left list */}
+                <div className="xl:col-span-5 bg-white rounded-3xl border border-gray-100 shadow-sm p-4 space-y-4 min-h-[400px]">
+                  <h2 className="text-base font-bold text-gray-800 px-2 pb-2 border-b border-gray-50 flex justify-between items-center">
+                    <span>Estudantes Cadastrados</span>
+                    <span className="px-2 py-0.5 bg-[#635bfc]/10 text-[#635bfc] text-[10px] rounded-full font-bold">{students.length}</span>
+                  </h2>
+
+                  <div className="space-y-2 max-h-[500px] overflow-y-auto pr-1">
+                    {students.length === 0 ? (
+                      <p className="py-20 text-center text-gray-400 italic text-xs">Nenhum aluno carregado.</p>
+                    ) : (
+                      students
+                        .filter(s => s.name.toLowerCase().includes(searchQuery.toLowerCase()))
+                        .map((s) => {
+                          const isSelected = s.id === selectedStudentId;
+                          return (
+                            <div
+                              key={`student-${s.id}`}
+                              onClick={() => setSelectedStudentId(s.id)}
+                              className={`p-3 rounded-2xl border transition-all cursor-pointer flex items-center justify-between ${
+                                isSelected 
+                                  ? 'bg-[#635bfc]/5 border-[#635bfc]/30' 
+                                  : 'bg-[#f8fafc]/50 border-gray-100 hover:bg-white hover:border-gray-200'
+                              }`}
+                            >
+                              <div className="flex gap-3 items-center min-w-0">
+                                <img src={s.img} alt={s.name} className="w-9 h-9 rounded-full object-cover border border-slate-100 shrink-0" />
+                                <div className="min-w-0">
+                                  <p className="font-extrabold text-[13px] text-gray-800 truncate">{s.name}</p>
+                                  <p className="text-[10px] text-gray-400 font-semibold mt-0.5 truncate">{s.class}</p>
+                                </div>
+                              </div>
+                              <button
+                                onClick={async (e) => {
+                                  e.stopPropagation();
+                                  if (confirm(`Tem certeza de que deseja excluir permanentemente o aluno ${s.name}?`)) {
+                                    try {
+                                      const { error } = await supabase.from('students').delete().eq('id', s.id);
+                                      if (error) throw error;
+                                      setStudents(prev => prev.filter(student => student.id !== s.id));
+                                      alert('Aluno excluído com sucesso! 🗑️');
+                                      if (selectedStudentId === s.id) {
+                                        setSelectedStudentId(null);
+                                      }
+                                    } catch (err) {
+                                      console.warn('Erro ao excluir no banco:', err);
+                                      setStudents(prev => prev.filter(student => student.id !== s.id));
+                                      alert('Aluno removido localmente.');
                                     }
-                                  } catch (err) {
-                                    console.warn('Erro ao excluir no banco:', err);
-                                    setStudents(prev => prev.filter(student => student.id !== s.id));
-                                    alert('Aluno removido localmente.');
                                   }
+                                }}
+                                className="p-1.5 hover:bg-red-50 text-gray-400 hover:text-red-500 rounded-lg transition-colors border-none bg-transparent cursor-pointer"
+                                title="Excluir aluno"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          );
+                        })
+                    )}
+                  </div>
+                </div>
+
+                {/* Selected Student details right pane */}
+                <div className="xl:col-span-7 bg-white rounded-3xl border border-gray-100/80 shadow-sm p-6 space-y-6 min-h-[400px]">
+                  <AnimatePresence mode="wait">
+                    {!selectedStudent ? (
+                      <div className="flex flex-col items-center justify-center py-24 text-center text-gray-400 gap-3">
+                        <User className="w-12 h-12 text-[#635bfc]/30 animate-pulse" />
+                        <div className="max-w-xs space-y-1">
+                          <h4 className="font-bold text-sm text-gray-800">Selecione um Aluno</h4>
+                          <p className="text-[11px] text-gray-400">Escolha um aluno na lista ao lado para inspecionar seus dados de matrícula, logs de acessos recentes e gerenciar cadastro.</p>
+                        </div>
+                      </div>
+                    ) : (
+                      <motion.div
+                        key={`student-detail-${selectedStudent.id}`}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -10 }}
+                        className="space-y-6"
+                      >
+                        {/* Profile header card */}
+                        <div className="flex flex-col sm:flex-row items-center gap-4 pb-5 border-b border-gray-50 relative">
+                          <img src={selectedStudent.img} alt={selectedStudent.name} className="w-16 h-16 rounded-full object-cover border-2 border-brand/20 shadow-md" />
+                          <div className="text-center sm:text-left">
+                            <h3 className="font-extrabold text-lg text-gray-800 leading-tight">{selectedStudent.name}</h3>
+                            <p className="text-xs text-[#635bfc] font-bold mt-1">{selectedStudent.class}</p>
+                            <p className="text-[10px] text-gray-400 font-semibold mt-1">
+                              Matrícula: {selectedStudent.matricula} &nbsp;|&nbsp; Gênero: {selectedStudent.gender === 'F' ? 'Feminino' : 'Masculino'}
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Sub-cards specs */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="p-4 bg-gray-50/50 rounded-2xl border border-gray-100 space-y-3">
+                            <h4 className="font-black text-[10px] uppercase text-gray-400 tracking-wider">Histórico de Acesso</h4>
+                            <div className="space-y-2 text-xs">
+                              <div className="flex justify-between">
+                                <span className="text-gray-400">Método de Login:</span>
+                                <span className="font-bold text-gray-700 capitalize">{selectedStudent.loginMethod || 'Código'}</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span className="text-gray-400">E-mail:</span>
+                                <span className="font-bold text-brand truncate max-w-[150px] font-mono">{selectedStudent.email}</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span className="text-gray-400">Último Login:</span>
+                                <span className="font-bold text-gray-700 text-[10px]">{selectedStudent.lastAccessAt ? new Date(selectedStudent.lastAccessAt).toLocaleString() : 'Não informado'}</span>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="p-4 bg-gray-50/50 rounded-2xl border border-gray-100 space-y-3">
+                            <h4 className="font-black text-[10px] uppercase text-gray-400 tracking-wider">Métricas de Aprendizado</h4>
+                            <div className="space-y-2.5">
+                              <div>
+                                <div className="flex justify-between text-xs font-bold text-gray-600 mb-1">
+                                  <span>Progresso:</span>
+                                  <span>{selectedStudent.progress || 0}%</span>
+                                </div>
+                                <div className="w-full h-2 bg-gray-200/50 rounded-full overflow-hidden">
+                                  <div 
+                                    className="h-full bg-brand rounded-full transition-all duration-500" 
+                                    style={{ width: `${selectedStudent.progress || 0}%` }}
+                                  />
+                                </div>
+                              </div>
+                              <div className="flex justify-between items-center text-xs">
+                                <span className="text-gray-400">Nível:</span>
+                                <span className="px-2 py-0.5 bg-brand-light text-brand text-[9px] font-black uppercase rounded-md border border-brand/10">
+                                  {selectedStudent.progress >= 90 ? 'Mestre' : selectedStudent.progress >= 70 ? 'Avançado' : selectedStudent.progress >= 50 ? 'Intermediário' : 'Iniciante'}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Critical Removal Area */}
+                        <div className="p-4 bg-red-50/50 border border-red-100 rounded-2xl space-y-3">
+                          <div className="flex gap-2.5 items-start">
+                            <ShieldAlert className="w-5 h-5 text-red-500 shrink-0" />
+                            <div>
+                              <h4 className="font-bold text-xs text-red-700">Zona de Perigo</h4>
+                              <p className="text-[10px] text-gray-400">Ao deletar este aluno, todos os registros de acessos, estatísticas e submissões dele serão limpos do banco.</p>
+                            </div>
+                          </div>
+                          <button
+                            onClick={async () => {
+                              if (confirm(`Excluir de forma irrevogável o cadastro do aluno ${selectedStudent.name}?`)) {
+                                try {
+                                  const { error } = await supabase.from('students').delete().eq('id', selectedStudent.id);
+                                  if (error) throw error;
+                                  setStudents(prev => prev.filter(student => student.id !== selectedStudent.id));
+                                  alert('Aluno deletado permanentemente! 🗑️');
+                                  setSelectedStudentId(null);
+                                } catch (err) {
+                                  console.warn('Erro ao excluir no banco:', err);
+                                  setStudents(prev => prev.filter(student => student.id !== selectedStudent.id));
+                                  alert('Removido localmente.');
+                                  setSelectedStudentId(null);
                                 }
+                              }
+                            }}
+                            className="w-full py-2.5 bg-red-100 hover:bg-red-200 border border-red-200 text-red-600 rounded-xl text-xs font-bold transition-all cursor-pointer"
+                          >
+                            Excluir {selectedStudent.name} 🗑️
+                          </button>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+
+              </section>
+            )}
+
+            {/* VIEW C: CHAVES DE ACESSO */}
+            {activeFolder === 'accessKeys' && (
+              <section className="space-y-6 text-left animate-fade-in-up">
+                
+                <div className="flex items-center justify-between">
+                  <h2 className="text-base font-bold text-gray-800 flex items-center gap-2">
+                    <span>Códigos e Convites de Acesso Ativos</span>
+                    <span className="px-2 py-0.5 bg-brand-light text-brand text-[10px] rounded-full font-bold">{activeCodes.length}</span>
+                  </h2>
+                  <button 
+                    onClick={() => { setGeneratedLinkInfo(null); setIsLinkModalOpen(true); }}
+                    className="py-1.5 px-3 bg-brand text-white text-[11px] font-black rounded-full hover:bg-brand-dark transition-all flex items-center gap-1 cursor-pointer border-none shadow-sm shadow-[#635bfc]/10"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Gerar Novo</span>
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                  {activeCodes.length === 0 ? (
+                    <div className="col-span-full py-20 text-center text-gray-400 italic text-xs bg-white rounded-3xl border border-gray-100 shadow-sm">
+                      Nenhuma chave de convite ativa. Clique em "Gerar Novo" para convidar alunos.
+                    </div>
+                  ) : (
+                    activeCodes.map((item) => (
+                      <div key={item.id} className="p-4 bg-white border border-gray-100 rounded-3xl shadow-sm flex flex-col justify-between hover:shadow-md transition-all">
+                        <div className="flex justify-between items-start gap-2 mb-2">
+                          <div className="min-w-0 flex-grow">
+                            <h4 className="font-extrabold text-sm text-gray-800 leading-tight truncate">{item.studentName}</h4>
+                            <p className="text-[10px] text-brand font-mono font-bold mt-1 tracking-wider">ABBA-{item.code}</p>
+                          </div>
+                          
+                          <div className="flex gap-1">
+                            <button
+                              onClick={() => {
+                                const magicLink = `${window.location.origin}/?code=ABBA-${item.code}`;
+                                navigator.clipboard.writeText(magicLink);
+                                setCopiedCodeText(item.code);
+                                setTimeout(() => setCopiedCodeText(null), 2000);
                               }}
-                              className="p-1.5 hover:bg-red-500/10 text-slate-400 hover:text-red-400 rounded-lg transition-colors border-none bg-transparent cursor-pointer shrink-0 z-30 flex items-center justify-center"
-                              title="Excluir aluno permanentemente"
+                              className="p-1.5 hover:bg-brand/5 text-gray-400 hover:text-brand rounded-lg transition-colors border-none bg-transparent cursor-pointer"
+                              title="Copiar Link de Acesso"
+                            >
+                              {copiedCodeText === item.code ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
+                            </button>
+                            <button
+                              onClick={() => handleDeleteLink(item.code)}
+                              className="p-1.5 hover:bg-red-50 text-gray-400 hover:text-red-500 rounded-lg transition-colors border-none bg-transparent cursor-pointer"
+                              title="Excluir código"
                             >
                               <Trash2 className="w-3.5 h-3.5" />
                             </button>
                           </div>
-                        </motion.div>
-                      );
-                    })
-                )
-              )}
-            </>
-          )}
-
-        </div>
-      </section>
-
-      {/* 3. COLUNA: DETALHES DA SUBMISSÃO SELECIONADA */}
-      <main className="flex-1 bg-[#06060c] flex flex-col min-w-0 relative z-10">
-        
-        {/* Cabeçalho do Detalhe (Barra superior de ações) */}
-        <header className="h-[76px] px-6 border-b border-white/5 flex items-center justify-between shrink-0 bg-[#06060c]/80 backdrop-blur-md">
-          <div className="flex items-center gap-3">
-            <div className="w-2.5 h-2.5 bg-emerald-500 rounded-full animate-ping" />
-            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Revisor de Aprendizado</span>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <span className="text-[10px] font-semibold text-slate-500">Última sincronização: Agora</span>
-          </div>
-        </header>
-
-        {/* Visualização de Conteúdo */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar text-left">
-          
-          <AnimatePresence mode="wait">
-            {activeFolder === 'students' ? (
-              !selectedStudent ? (
-                <motion.div 
-                  key="empty-student-detail"
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                  className="flex flex-col items-center justify-center py-32 text-center text-slate-500 gap-4"
-                >
-                  <div className="w-16 h-16 rounded-full bg-[#121325]/60 border border-white/5 flex items-center justify-center shadow-lg text-slate-400">
-                    <User className="w-8 h-8 animate-pulse text-purple-400" />
-                  </div>
-                  <div className="max-w-xs space-y-1">
-                    <h4 className="font-bold text-[14px] text-white">Nenhum aluno selecionado</h4>
-                    <p className="text-[11px] leading-relaxed text-slate-400">Escolha um aluno na lista ao lado para ver seu progresso, dados cadastrais e realizar ações de gerenciamento.</p>
-                  </div>
-                </motion.div>
-              ) : (
-                <motion.div
-                  key={`student-detail-${selectedStudent.id}`}
-                  initial={{ opacity: 0, scale: 0.99 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.99 }}
-                  transition={{ duration: 0.25 }}
-                  className="space-y-6"
-                >
-                  {/* Perfil Header */}
-                  <div className="p-6 rounded-3xl bg-[#131526]/40 border border-white/5 backdrop-blur-md flex flex-col md:flex-row items-center gap-5 relative overflow-hidden">
-                    <div className="absolute top-0 right-0 w-32 h-32 bg-purple-500/10 rounded-full blur-2xl" />
-                    
-                    <img 
-                      src={selectedStudent.img} 
-                      alt={selectedStudent.name} 
-                      className="w-20 h-20 rounded-full object-cover border-2 border-purple-500/30 shadow-lg relative z-10" 
-                    />
-                    
-                    <div className="flex-1 text-center md:text-left relative z-10">
-                      <h3 className="font-extrabold text-xl text-white leading-tight">{selectedStudent.name}</h3>
-                      <p className="text-xs text-purple-400 font-semibold mt-1">{selectedStudent.class}</p>
-                      
-                      <div className="flex flex-wrap items-center justify-center md:justify-start gap-4 mt-3 text-[10px] text-slate-400 font-semibold">
-                        <span>Matrícula: <strong className="text-white">{selectedStudent.matricula}</strong></span>
-                        <span>Sexo: <strong className="text-white">{selectedStudent.gender === 'F' ? 'Feminino' : 'Masculino'}</strong></span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Informações de Acesso */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="p-6 rounded-3xl bg-[#131526]/40 border border-white/5 space-y-4">
-                      <h4 className="font-bold text-xs uppercase tracking-wider text-slate-400 border-b border-white/5 pb-2">Status de Acesso</h4>
-                      
-                      <div className="space-y-3">
-                        <div className="flex justify-between items-center text-xs">
-                          <span className="text-slate-500 font-medium">Método de Entrada:</span>
-                          <span className="px-2 py-0.5 bg-purple-500/10 text-purple-400 rounded-lg font-bold text-[10px] capitalize">
-                            {selectedStudent.loginMethod || 'Código'}
-                          </span>
                         </div>
-                        <div className="flex justify-between items-center text-xs">
-                          <span className="text-slate-500 font-medium">Último Acesso:</span>
-                          <span className="text-white font-semibold">
-                            {selectedStudent.lastAccessAt 
-                              ? new Date(selectedStudent.lastAccessAt).toLocaleString() 
-                              : 'Sem registros'}
-                          </span>
-                        </div>
-                        <div className="flex justify-between items-center text-xs">
-                          <span className="text-slate-500 font-medium">E-mail Cadastrado:</span>
-                          <span className="text-pink-400 font-mono font-bold text-[11px] truncate max-w-[200px]" title={selectedStudent.email}>
-                            {selectedStudent.email || 'Não informado'}
-                          </span>
+
+                        <div className="flex justify-between items-center text-[10px] text-gray-400 font-bold mt-3 pt-2.5 border-t border-gray-50">
+                          <span>Duração: {item.durationLabel || '1 Hora'}</span>
+                          <span className="text-emerald-500 bg-emerald-50 border border-emerald-100 rounded-md px-1.5 py-0.5">Ativo ✓</span>
                         </div>
                       </div>
-                    </div>
-
-                    <div className="p-6 rounded-3xl bg-[#131526]/40 border border-white/5 space-y-4">
-                      <h4 className="font-bold text-xs uppercase tracking-wider text-slate-400 border-b border-white/5 pb-2">Desempenho Geral</h4>
-                      
-                      <div className="space-y-4 pt-1">
-                        <div>
-                          <div className="flex justify-between items-center text-xs mb-1.5">
-                            <span className="text-slate-500 font-medium">Progresso das Atividades:</span>
-                            <span className="text-white font-black">{selectedStudent.progress || 0}%</span>
-                          </div>
-                          <div className="w-full h-2 bg-white/5 rounded-full overflow-hidden">
-                            <div 
-                              className="h-full bg-gradient-to-r from-purple-500 via-pink-500 to-amber-500 transition-all duration-500" 
-                              style={{ width: `${selectedStudent.progress || 0}%` }}
-                            />
-                          </div>
-                        </div>
-
-                        <div className="flex justify-between items-center text-xs">
-                          <span className="text-slate-500 font-medium">Nível Alcançado:</span>
-                          <span className="px-2.5 py-0.5 bg-gradient-to-r from-purple-600/30 to-pink-600/30 border border-purple-500/30 text-purple-300 font-black text-[9px] uppercase rounded-full">
-                            {selectedStudent.progress >= 90 ? '🏆 Mestre' : selectedStudent.progress >= 70 ? '⭐️ Avançado' : selectedStudent.progress >= 50 ? '⚡️ Intermediário' : '🌱 Iniciante'}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Ação de Remoção Crítica */}
-                  <div className="p-6 rounded-3xl bg-red-950/10 border border-red-900/20 space-y-4">
-                    <div className="flex items-center gap-3">
-                      <ShieldAlert className="w-5 h-5 text-red-500 shrink-0" />
-                      <div>
-                        <h4 className="font-bold text-xs text-red-400">Área de Exclusão de Aluno</h4>
-                        <p className="text-[10px] text-slate-400">Esta ação é permanente e removerá o cadastro do aluno bem como seus registros associados.</p>
-                      </div>
-                    </div>
-                    
-                    <button
-                      onClick={async () => {
-                        if (confirm(`Tem certeza de que deseja excluir permanentemente o aluno ${selectedStudent.name}?`)) {
-                          try {
-                            const { error } = await supabase.from('students').delete().eq('id', selectedStudent.id);
-                            if (error) throw error;
-                            setStudents(prev => prev.filter(student => student.id !== selectedStudent.id));
-                            alert('Aluno excluído com sucesso! 🗑️');
-                            setSelectedStudentId(null);
-                          } catch (err) {
-                            console.warn('Erro ao excluir no banco:', err);
-                            setStudents(prev => prev.filter(student => student.id !== selectedStudent.id));
-                            alert('Aluno removido localmente.');
-                            setSelectedStudentId(null);
-                          }
-                        }
-                      }}
-                      className="w-full py-3 bg-red-950/40 hover:bg-red-950/60 border border-red-900/40 hover:border-red-500 text-red-400 font-bold text-xs rounded-2xl transition-all cursor-pointer"
-                    >
-                      Excluir permanentemente {selectedStudent.name} 🗑️
-                    </button>
-                  </div>
-                </motion.div>
-              )
-            ) : (
-              !selectedSubmission ? (
-                <motion.div 
-                  key="empty-detail"
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                className="flex flex-col items-center justify-center py-32 text-center text-slate-500 gap-4"
-              >
-                <div className="w-16 h-16 rounded-full bg-[#121325]/60 border border-white/5 flex items-center justify-center shadow-lg text-slate-400">
-                  <Award className="w-8 h-8 animate-bounce" />
-                </div>
-                <div className="max-w-xs space-y-1">
-                  <h4 className="font-bold text-[14px] text-white">Nenhuma atividade selecionada</h4>
-                  <p className="text-[11px] leading-relaxed text-slate-400">Escolha uma submissão de aluno na lista ao lado para corrigir a soletragem e acessar os arquivos anexados.</p>
-                </div>
-              </motion.div>
-            ) : (
-              <motion.div
-                key={`detail-${selectedSubmission.id}`}
-                initial={{ opacity: 0, scale: 0.99 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.99 }}
-                transition={{ duration: 0.25 }}
-                className="space-y-6"
-              >
-                {/* Cartão Informativo de Aluno */}
-                <div className="p-6 rounded-3xl bg-[#121325]/40 border border-white/5 flex flex-wrap justify-between items-center gap-4 relative overflow-hidden">
-                  <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-b from-purple-500/10 to-transparent blur-xl pointer-events-none" />
-                  
-                  <div className="flex items-center gap-4">
-                    <div className="w-14 h-14 bg-gradient-to-tr from-purple-500 to-pink-500 p-0.5 rounded-2xl shadow-lg shrink-0">
-                      <div className="w-full h-full bg-[#121325] rounded-[14px] flex items-center justify-center text-white font-extrabold text-[16px]">
-                        {selectedSubmission.studentName.charAt(0).toUpperCase()}
-                      </div>
-                    </div>
-                    <div>
-                      <h3 className="font-extrabold text-lg text-white leading-tight">{selectedSubmission.studentName}</h3>
-                      <p className="text-xs text-slate-400 font-semibold mt-1">E-mail: {selectedSubmission.studentEmail || 'estudante@email.com'}</p>
-                    </div>
-                  </div>
-
-                  <div className="text-right shrink-0">
-                    <span className="text-[11px] text-slate-500 block">Enviado em</span>
-                    <span className="font-bold text-xs text-slate-300 mt-1 block">
-                      {new Date(selectedSubmission.submittedAt).toLocaleDateString()} às {new Date(selectedSubmission.submittedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Arquivos Anexados (Supabase Storage) */}
-                <div className="space-y-3">
-                  <h4 className="text-xs font-black uppercase tracking-wider text-slate-500 flex items-center gap-2">
-                    📁 Arquivos Anexos (Enviados no Storage)
-                  </h4>
-                  
-                  {!selectedSubmission.taskFiles || selectedSubmission.taskFiles.length === 0 ? (
-                    <div className="p-5 rounded-2xl border border-dashed border-white/5 text-center text-slate-500 text-[11px] italic bg-[#121325]/10">
-                      Nenhum arquivo enviado para esta atividade.
-                    </div>
-                  ) : (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-                      {selectedSubmission.taskFiles.map((file, i) => (
-                        <div 
-                          key={i} 
-                          className="p-4 rounded-3xl bg-[#121325]/40 border border-white/5 flex items-center justify-between gap-3 hover:border-white/10 transition-colors"
-                        >
-                          <div className="flex items-center gap-3 min-w-0">
-                            <div className="w-9 h-9 rounded-xl bg-pink-500/10 border border-pink-500/20 text-pink-400 flex items-center justify-center shrink-0">
-                              <FileText className="w-5 h-5" />
-                            </div>
-                            <div className="min-w-0">
-                              <p className="font-bold text-[12px] text-white truncate leading-tight" title={file.name}>
-                                {file.name}
-                              </p>
-                              <p className="text-[10px] text-slate-500 font-semibold mt-0.5">{file.size}</p>
-                            </div>
-                          </div>
-
-                          {file.url ? (
-                            <a 
-                              href={file.url} 
-                              target="_blank" 
-                              rel="noreferrer" 
-                              className="px-3.5 py-1.5 rounded-xl bg-[#121325] border border-white/10 hover:border-white/20 active:scale-95 text-[10px] font-bold text-white transition-all flex items-center gap-1 shrink-0"
-                            >
-                              <Download className="w-3.5 h-3.5" />
-                              <span>Abrir</span>
-                            </a>
-                          ) : (
-                            <span className="text-[10px] text-slate-500 font-bold shrink-0">Local</span>
-                          )}
-                        </div>
-                      ))}
-                    </div>
+                    ))
                   )}
                 </div>
+              </section>
+            )}
 
-                {/* Palavras Soletradas no Ábaco */}
-                <div className="space-y-3">
-                  <h4 className="text-xs font-black uppercase tracking-wider text-slate-500 flex items-center gap-2">
-                    🔮 Histórico de Palavras Soletradas
-                  </h4>
+            {/* VIEW D: REGISTRO DE AÇÕES (LOGS) */}
+            {activeFolder === 'logs' && (
+              <section className="space-y-4 text-left animate-fade-in-up">
+                
+                <h2 className="text-base font-bold text-gray-800 flex items-center gap-2">
+                  <span>Monitoramento de Atividade Real (Ábaco 3D)</span>
+                  <span className="px-2.5 py-0.5 bg-brand-light text-brand text-[10px] rounded-full font-bold">{actionLogs.length} logs</span>
+                </h2>
 
-                  {selectedSubmission.spelledWords.length === 0 ? (
-                    <div className="p-5 rounded-2xl border border-dashed border-white/5 text-center text-slate-500 text-[11px] italic bg-[#121325]/10">
-                      Nenhuma palavra soletrada disponível.
+                <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden p-3.5">
+                  <div className="space-y-2 max-h-[500px] overflow-y-auto pr-1">
+                    {actionLogs.length === 0 ? (
+                      <p className="py-20 text-center text-gray-400 italic text-xs">Nenhum log de atividade registrado no momento.</p>
+                    ) : (
+                      actionLogs
+                        .filter(l => l.student_name.toLowerCase().includes(searchQuery.toLowerCase()) || l.action_type.toLowerCase().includes(searchQuery.toLowerCase()))
+                        .map((log) => (
+                          <div key={log.id} className="p-3 bg-gray-50/50 hover:bg-gray-50 border border-gray-100/60 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 text-xs transition-colors">
+                            <div className="flex items-center gap-3">
+                              <div className="w-7.5 h-7.5 rounded-full bg-cyan-100 border border-cyan-200 text-cyan-600 font-black flex items-center justify-center text-[10px]">
+                                LOG
+                              </div>
+                              <div className="text-left">
+                                <span className="font-extrabold text-gray-800 block leading-tight">{log.student_name}</span>
+                                <span className="text-[10px] text-gray-400 font-bold block mt-0.5 uppercase tracking-wide text-cyan-500">{log.action_type}</span>
+                              </div>
+                            </div>
+
+                            <p className="text-[10px] text-gray-500 font-mono bg-white border border-gray-150 p-2 rounded-xl flex-1 max-w-lg truncate block text-left">
+                              {JSON.stringify(log.action_details)}
+                            </p>
+
+                            <span className="text-[9px] text-gray-400 font-bold shrink-0">
+                              {new Date(log.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                            </span>
+                          </div>
+                        ))
+                    )}
+                  </div>
+                </div>
+              </section>
+            )}
+
+            {/* VIEW E: TAREFAS CRIADAS */}
+            {activeFolder === 'tasks' && (
+              <section className="space-y-6 text-left animate-fade-in-up">
+                
+                <div className="flex items-center justify-between">
+                  <h2 className="text-base font-bold text-gray-800 flex items-center gap-2">
+                    <span>Tarefas e Lições Disponíveis</span>
+                    <span className="px-2 py-0.5 bg-brand-light text-brand text-[10px] rounded-full font-bold">{tasks.length}</span>
+                  </h2>
+                  <button 
+                    onClick={() => setIsTaskModalOpen(true)}
+                    className="py-1.5 px-3 bg-brand text-white text-[11px] font-black rounded-full hover:bg-brand-dark transition-all flex items-center gap-1 cursor-pointer border-none shadow-sm shadow-[#635bfc]/10"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Criar Tarefa</span>
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                  {tasks.length === 0 ? (
+                    <div className="col-span-full py-20 text-center text-gray-400 italic text-xs bg-white rounded-3xl border border-gray-100 shadow-sm">
+                      Nenhuma lição criada ainda. Clique em "Criar Tarefa" para começar.
                     </div>
                   ) : (
-                    <div className="space-y-3">
-                      {selectedSubmission.spelledWords.map((wordObj, i) => (
-                        <div 
-                          key={i} 
-                          className="p-4 rounded-3xl bg-[#131526]/50 border border-white/5 flex items-center justify-between gap-4"
-                        >
-                          <div className="flex items-center gap-4 overflow-hidden max-w-[80%]">
-                            <span className="px-2.5 py-1 rounded bg-[#0b0c16] text-[#00AA6C] font-mono font-bold text-xs border border-white/5 uppercase">
-                              {wordObj.word}
-                            </span>
+                    tasks
+                      .filter(t => t.title.toLowerCase().includes(searchQuery.toLowerCase()))
+                      .map((task) => (
+                        <div key={task.id} className="p-4 bg-white border border-gray-100 rounded-3xl shadow-sm hover:shadow-md transition-all flex flex-col justify-between">
+                          <div>
+                            <div className="flex justify-between items-start mb-2 gap-2">
+                              <span className="font-extrabold text-sm text-gray-800 leading-tight truncate">{task.title}</span>
+                              <span className={`px-2 py-0.5 text-[8px] font-bold rounded-md shrink-0 uppercase tracking-wide ${
+                                task.priority === 'Alta' ? 'bg-red-50 text-red-500 border border-red-100' : task.priority === 'Média' ? 'bg-amber-50 text-amber-600 border border-amber-100' : 'bg-green-50 text-green-500 border border-green-100'
+                              }`}>
+                                {task.priority}
+                              </span>
+                            </div>
+                            <p className="text-[11px] text-gray-400 leading-relaxed line-clamp-2 mt-1">{task.description}</p>
                             
-                            {/* Visualizador dos blocos em miniatura */}
-                            <div className="flex items-center gap-1 overflow-x-auto py-1 pr-4">
-                              {wordObj.letters.map((l, slotIdx) => (
-                                <div 
-                                  key={slotIdx} 
-                                  className="w-7 h-7 rounded-lg border flex items-center justify-center font-bold text-[11px] shrink-0"
-                                  style={{
-                                    backgroundColor: '#0c0d1b',
-                                    borderColor: wordObj.themeColor || '#a855f7',
-                                    color: wordObj.themeColor || '#a855f7'
-                                  }}
-                                >
-                                  {l.letter}
-                                </div>
+                            {/* Palavras-alvo */}
+                            <div className="flex flex-wrap gap-1 mt-3">
+                              {task.targetWords.map((w, idx) => (
+                                <span key={idx} className="px-1.5 py-0.5 bg-gray-50 text-gray-500 border border-gray-100 rounded font-mono text-[9px]">
+                                  {w.word}
+                                </span>
                               ))}
                             </div>
                           </div>
 
-                          <div 
-                            className="w-3.5 h-3.5 rounded-full border shrink-0" 
-                            style={{ backgroundColor: wordObj.themeColor || '#a855f7', borderColor: 'rgba(255,255,255,0.1)' }} 
-                          />
+                          <div className="flex justify-between items-center text-[10px] text-gray-400 font-bold mt-4 pt-2 border-t border-gray-50">
+                            <span>Prazo: {task.dueDate}</span>
+                            <span className="text-brand uppercase font-black tracking-wider text-[8px]">{task.targetWords[0]?.language || 'pt'}</span>
+                          </div>
                         </div>
-                      ))}
-                    </div>
+                      ))
                   )}
                 </div>
-
-                {/* Botão Gigante de Correção no Ábaco 3D */}
-                <div className="pt-4 border-t border-white/5">
-                  <button
-                    onClick={() => onLaunchReviewMode(selectedSubmission)}
-                    className="w-full py-4.5 bg-gradient-to-r from-purple-600 via-pink-600 to-amber-600 rounded-3xl font-extrabold text-[13px] text-white shadow-2xl hover:shadow-purple-500/10 active:scale-[0.98] transition-all flex items-center justify-center gap-2 cursor-pointer border-none"
-                  >
-                    <span className="material-symbols-outlined text-[18px]">3d_rotation</span>
-                    Iniciar Revisão no Ábaco 3D Real 🔮
-                  </button>
-                </div>
-              </motion.div>
-            ))}
-          </AnimatePresence>
-
-        </div>
-      </main>
-
-      {/* 4. COLUNA / GAVETA GAVETAL LATERAL (Criar tarefa/link - Estilo Salesforce) */}
-      <aside className="w-[340px] bg-[#0b0c16] border-l border-white/5 flex flex-col shrink-0 relative z-10 overflow-hidden">
-        
-        {/* Abas da Gaveta */}
-        <div className="flex bg-[#0c0d1b] border-b border-white/5 p-1 shrink-0">
-          <button
-            onClick={() => setDrawerTab('link')}
-            className={`flex-1 py-3.5 font-bold text-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer border-none bg-transparent ${
-              drawerTab === 'link' ? 'text-pink-400 border-b-2 border-pink-500' : 'text-slate-400 hover:text-slate-200'
-            }`}
-          >
-            <Key className="w-4 h-4" />
-            <span>Gerar Código</span>
-          </button>
-          <button
-            onClick={() => setDrawerTab('task')}
-            className={`flex-1 py-3.5 font-bold text-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer border-none bg-transparent ${
-              drawerTab === 'task' ? 'text-pink-400 border-b-2 border-pink-500' : 'text-slate-400 hover:text-slate-200'
-            }`}
-          >
-            <Plus className="w-4 h-4" />
-            <span>Criar Tarefa</span>
-          </button>
-        </div>
-
-        {/* Formulários */}
-        <div className="flex-1 overflow-y-auto p-5 custom-scrollbar text-left">
-          
-          <AnimatePresence mode="wait">
-            
-            {/* ABA A: GERAR CHAVE DE ACESSO */}
-            {drawerTab === 'link' && (
-              <motion.form 
-                key="form-link"
-                onSubmit={handleGenerateLink}
-                initial={{ opacity: 0, x: 10 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -10 }}
-                className="space-y-4"
-              >
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-black uppercase tracking-wider text-slate-500 ml-1">Selecionar Estudante</label>
-                  
-                  {students.length === 0 ? (
-                    <input 
-                      type="text"
-                      placeholder="Nome do Aluno (Ex: Leyton Graves)"
-                      value={selectedStudentName}
-                      onChange={(e) => setSelectedStudentName(e.target.value)}
-                      className="w-full bg-[#121325]/80 border border-white/5 py-2.5 px-4 rounded-xl text-xs text-white focus:outline-none focus:border-purple-500 font-medium"
-                      required
-                    />
-                  ) : (
-                    <select
-                      value={selectedStudentName}
-                      onChange={(e) => setSelectedStudentName(e.target.value)}
-                      className="w-full bg-[#121325]/80 border border-white/5 py-2.5 px-3.5 rounded-xl text-xs text-white focus:outline-none focus:border-purple-500 font-medium"
-                    >
-                      {students.map((student, i) => (
-                        <option key={i} value={student.name}>{student.name} ({student.email.split('@')[0]})</option>
-                      ))}
-                    </select>
-                  )}
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-black uppercase tracking-wider text-slate-500 ml-1">Atribuir à Tarefa</label>
-                  {tasks.length === 0 ? (
-                    <p className="text-[10px] text-slate-500 italic bg-white/5 p-2.5 rounded-lg border border-white/5">Nenhuma tarefa criada ainda.</p>
-                  ) : (
-                    <select
-                      value={selectedTaskId}
-                      onChange={(e) => setSelectedTaskId(e.target.value)}
-                      className="w-full bg-[#121325]/80 border border-white/5 py-2.5 px-3.5 rounded-xl text-xs text-white focus:outline-none focus:border-purple-500 font-medium"
-                    >
-                      {tasks.map((task) => (
-                        <option key={task.id} value={task.id}>{task.title}</option>
-                      ))}
-                    </select>
-                  )}
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-black uppercase tracking-wider text-slate-500 ml-1">Expiração do Acesso</label>
-                  <select
-                    value={linkDuration}
-                    onChange={(e) => setLinkDuration(e.target.value)}
-                    className="w-full bg-[#121325]/80 border border-white/5 py-2.5 px-3.5 rounded-xl text-xs text-white focus:outline-none focus:border-purple-500 font-medium"
-                  >
-                    <option value="1h">1 Hora (Segurança máxima)</option>
-                    <option value="4h">4 Horas</option>
-                    <option value="1d">1 Dia</option>
-                    <option value="1w">1 Semana</option>
-                  </select>
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={isCreatingLink || !selectedStudentName}
-                  className="w-full py-3 bg-[#005bb3] hover:bg-[#00468c] disabled:opacity-40 text-white font-extrabold text-xs rounded-xl shadow-lg active:scale-95 transition-all flex items-center justify-center gap-1.5 cursor-pointer border-none"
-                >
-                  {isCreatingLink ? 'Gerando Link...' : 'Gerar Chave e Link 🔗'}
-                </button>
-
-                {/* Exibição do link gerado */}
-                {generatedLinkInfo && (
-                  <motion.div 
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    className="bg-[#121325] border border-emerald-500/20 p-4.5 rounded-2xl mt-4 text-xs space-y-3"
-                  >
-                    <div className="flex justify-between items-center">
-                      <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider">Código de Acesso Único</span>
-                      <span className="text-[9px] px-1.5 py-0.5 bg-emerald-500/10 text-emerald-300 font-bold rounded">Criado</span>
-                    </div>
-                    <p className="font-mono text-center font-black text-lg py-2.5 bg-black/40 rounded-xl text-white tracking-widest uppercase">
-                      {generatedLinkInfo.code}
-                    </p>
-                    <div className="space-y-1">
-                      <span className="text-[9px] font-bold text-slate-500 block">Link Mágico:</span>
-                      <input 
-                        type="text" 
-                        readOnly 
-                        value={generatedLinkInfo.url}
-                        onClick={(e) => (e.target as HTMLInputElement).select()}
-                        className="w-full bg-black/40 border border-white/5 py-1.5 px-3 rounded-lg text-[10px] font-mono text-slate-400 focus:outline-none"
-                      />
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        navigator.clipboard.writeText(generatedLinkInfo.url);
-                        alert('Link de acesso copiado para a área de transferência! 📋');
-                      }}
-                      className="w-full py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[10px] rounded-lg transition-colors cursor-pointer border-none"
-                    >
-                      Copiar Link
-                    </button>
-                  </motion.div>
-                )}
-              </motion.form>
+              </section>
             )}
 
-            {/* ABA B: CRIAR TAREFA */}
-            {drawerTab === 'task' && (
-              <motion.form 
-                key="form-task"
-                onSubmit={handleCreateTask}
-                initial={{ opacity: 0, x: -10 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: 10 }}
-                className="space-y-4"
+          </div>
+        </div>
+
+        {/* ==================================================== */}
+        {/* 3. COLUNA: SIDEBAR DIREITO (ESTATÍSTICAS)            */}
+        {/* ==================================================== */}
+        
+        {/* Desktop Stats Sidebar */}
+        <aside className="w-80 flex-shrink-0 bg-white border-l border-gray-100 p-8 hidden xl:flex flex-col justify-between overflow-y-auto scrollbar-hide text-left">
+          <div className="space-y-8 flex-1">
+            <div className="flex items-center justify-between pb-2 border-b border-gray-50">
+              <h2 className="text-base font-bold text-gray-800">Estatísticas</h2>
+              <Award className="w-5 h-5 text-gray-300" />
+            </div>
+
+            {/* Circular Progress & Selected Student snapshot */}
+            <div className="flex flex-col items-center text-center">
+              <div className="relative w-36 h-36 flex items-center justify-center mb-5">
+                <svg className="w-full h-full -rotate-90">
+                  <circle className="text-gray-100" cx="72" cy="72" fill="transparent" r="62" stroke="currentColor" strokeWidth="6"></circle>
+                  <circle 
+                    className="text-[#635bfc] rounded-full transition-all duration-1000" 
+                    cx="72" 
+                    cy="72" 
+                    fill="transparent" 
+                    r="62" 
+                    stroke="currentColor" 
+                    strokeDasharray="390" 
+                    strokeDashoffset={390 - (390 * (activeStatStudent.progress || 0)) / 100}
+                    strokeWidth="6"
+                  ></circle>
+                </svg>
+                <div className="absolute inset-0 flex flex-col items-center justify-center">
+                  <img 
+                    alt="Estudante ativo" 
+                    className="w-18 h-18 rounded-full border-4 border-white shadow-lg object-cover" 
+                    src={activeStatStudent.img}
+                  />
+                  <div className="bg-[#635bfc] text-white text-[9px] font-bold px-2 py-0.5 rounded-full absolute bottom-4 border-2 border-white shadow-sm">
+                    {activeStatStudent.progress || 0}%
+                  </div>
+                </div>
+              </div>
+              <h3 className="text-base font-extrabold text-gray-800">Olá, {activeStatStudent.name.split(' ')[0]}! 🔥</h3>
+              <p className="text-[11px] text-gray-400 mt-1 leading-relaxed max-w-xs">
+                Acompanhando o progresso individual nas lições de vogais e junção de sílabas.
+              </p>
+            </div>
+
+            {/* Activity Chart simulation */}
+            <div className="p-4 bg-gray-50/50 rounded-2xl border border-gray-100">
+              <h4 className="text-[10px] font-black uppercase text-gray-400 tracking-wider mb-4">Envios por Período</h4>
+              <div className="flex items-end justify-between gap-3 h-20 px-2 mb-3">
+                <div className="w-7 bg-[#635bfc]/20 h-[40%] rounded-lg hover:bg-[#635bfc]/30 transition-all cursor-pointer" title="40%" />
+                <div className="w-7 bg-[#635bfc]/45 h-[65%] rounded-lg hover:bg-[#635bfc]/60 transition-all cursor-pointer" title="65%" />
+                <div className="w-7 bg-[#635bfc]/25 h-[30%] rounded-lg hover:bg-[#635bfc]/40 transition-all cursor-pointer" title="30%" />
+                <div className="w-7 bg-[#635bfc] h-[90%] rounded-lg hover:bg-brand-dark transition-all cursor-pointer" title="90%" />
+              </div>
+              <div className="flex justify-between text-[8px] font-bold text-gray-400 px-1">
+                <span>01-10 Out</span>
+                <span>11-20 Out</span>
+                <span>21-31 Out</span>
+              </div>
+            </div>
+
+            {/* Simulated Mentors List */}
+            <div className="space-y-4">
+              <h3 className="font-extrabold text-xs text-gray-800 uppercase tracking-wider">Orientadores da Rede</h3>
+              <div className="space-y-3">
+                
+                {/* Mentor 1 */}
+                <div className="flex items-center gap-3 bg-white p-2 hover:bg-gray-50 rounded-xl transition-all border border-transparent hover:border-gray-100">
+                  <img alt="Mentor 1" className="w-9 h-9 rounded-full object-cover border border-slate-100" src="https://lh3.googleusercontent.com/aida-public/AB6AXuB_1Qhc2K70O_H6pLnYXi0wlUW04npQ10lh-Ahke544FXvaIGufKHMGxyQExINqYgvLPncTQpFrBbPfnirVAhyi570nHJzy2IkClpZIuZxLzvUxWTNY0Q4XUchiEZa4WGW-WgnYVeXbXO8weI-lIBtMcKNEdgIBo1gxkQUHmU_Sn7d2DnteeQ952fyIS_LITt1Bnq13sOYEb4nS3XKu0BOQMy-gWnb-dzotte1qoVtShga24gEkueN6cNDzWUZuU-z30YY2Gsn2vpfZ" />
+                  <div className="flex-grow text-left">
+                    <p className="text-xs font-bold text-gray-800 leading-tight">Marta Ferreira</p>
+                    <p className="text-[10px] text-gray-400 mt-0.5">Especialista</p>
+                  </div>
+                  <button 
+                    onClick={() => toggleFollowMentor('Marta Ferreira')}
+                    className={`text-[9px] font-black px-2.5 py-1 rounded-lg border transition-all cursor-pointer ${
+                      followedMentors.includes('Marta Ferreira') 
+                        ? 'bg-emerald-50 text-emerald-600 border-emerald-100' 
+                        : 'bg-transparent text-brand border-brand/20 hover:bg-brand hover:text-white hover:border-transparent'
+                    }`}
+                  >
+                    {followedMentors.includes('Marta Ferreira') ? 'Seguindo' : 'Seguir'}
+                  </button>
+                </div>
+
+                {/* Mentor 2 */}
+                <div className="flex items-center gap-3 bg-white p-2 hover:bg-gray-50 rounded-xl transition-all border border-transparent hover:border-gray-100">
+                  <img alt="Mentor 2" className="w-9 h-9 rounded-full object-cover border border-slate-100" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCzIZAlz5jon-Um-Y11HiBXOheXLA9QW2j3xxe2WxI_aZ2aHjOvqWV0_uymLSjzmYOXWzZRjA_Cw-bhIw-BsvwV44v02CVIM6NgFzr60sXK5m1CeFKu8ooteyHxHVXpgYHCP7qboy7bIKtKx38pxOb-ASQ0T2sIKi-D4Dy3JlerVRoCF-O6VKTZBCwgOu_aFWoybhDZv-Dxq0kXZgc422SYYLBs9TqfbM-t7GkSs2qgFsTA88J3EPPTi5K7dHBUohoq2VdH1PMeC69q" />
+                  <div className="flex-grow text-left">
+                    <p className="text-xs font-bold text-gray-800 leading-tight">Prof. Arnaldo</p>
+                    <p className="text-[10px] text-gray-400 mt-0.5">Psicopedagogo</p>
+                  </div>
+                  <button 
+                    onClick={() => toggleFollowMentor('Prof. Arnaldo')}
+                    className={`text-[9px] font-black px-2.5 py-1 rounded-lg border transition-all cursor-pointer ${
+                      followedMentors.includes('Prof. Arnaldo') 
+                        ? 'bg-emerald-50 text-emerald-600 border-emerald-100' 
+                        : 'bg-transparent text-brand border-brand/20 hover:bg-brand hover:text-white hover:border-transparent'
+                    }`}
+                  >
+                    {followedMentors.includes('Prof. Arnaldo') ? 'Seguindo' : 'Seguir'}
+                  </button>
+                </div>
+
+              </div>
+            </div>
+
+          </div>
+        </aside>
+
+        {/* Mobile Stats Sidebar Overlay Drawer */}
+        <AnimatePresence>
+          {isMobileStatsOpen && (
+            <>
+              <motion.div 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 0.3 }}
+                exit={{ opacity: 0 }}
+                onClick={() => setIsMobileStatsOpen(false)}
+                className="fixed inset-0 bg-black z-40 lg:hidden"
+              />
+              <motion.aside 
+                initial={{ x: '100%' }}
+                animate={{ x: 0 }}
+                exit={{ x: '100%' }}
+                transition={{ type: 'spring', damping: 25, stiffness: 220 }}
+                className="fixed inset-y-0 right-0 w-80 bg-white z-50 p-6 flex flex-col justify-between shadow-2xl lg:hidden text-left"
               >
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-black uppercase tracking-wider text-slate-500 ml-1">Título da Atividade</label>
+                <div className="space-y-6 flex-grow overflow-y-auto scrollbar-hide pr-1">
+                  <div className="flex items-center justify-between pb-2 border-b border-gray-50">
+                    <h2 className="text-base font-bold text-gray-800">Estatísticas do Aluno</h2>
+                    <button onClick={() => setIsMobileStatsOpen(false)} className="p-1 rounded-lg hover:bg-gray-100 border-none bg-transparent cursor-pointer">
+                      <X className="w-5 h-5 text-gray-500" />
+                    </button>
+                  </div>
+
+                  <div className="flex flex-col items-center text-center">
+                    <div className="relative w-36 h-36 flex items-center justify-center mb-5">
+                      <svg className="w-full h-full -rotate-90">
+                        <circle className="text-gray-100" cx="72" cy="72" fill="transparent" r="62" stroke="currentColor" strokeWidth="6"></circle>
+                        <circle 
+                          className="text-[#635bfc] rounded-full transition-all" 
+                          cx="72" 
+                          cy="72" 
+                          fill="transparent" 
+                          r="62" 
+                          stroke="currentColor" 
+                          strokeDasharray="390" 
+                          strokeDashoffset={390 - (390 * (activeStatStudent.progress || 0)) / 100}
+                          strokeWidth="6"
+                        ></circle>
+                      </svg>
+                      <div className="absolute inset-0 flex flex-col items-center justify-center">
+                        <img alt="Estudante ativo" className="w-18 h-18 rounded-full border-4 border-white shadow-lg object-cover" src={activeStatStudent.img} />
+                        <div className="bg-[#635bfc] text-white text-[9px] font-bold px-2 py-0.5 rounded-full absolute bottom-4 border-2 border-white shadow-sm">
+                          {activeStatStudent.progress || 0}%
+                        </div>
+                      </div>
+                    </div>
+                    <h3 className="text-base font-extrabold text-gray-800">Olá, {activeStatStudent.name.split(' ')[0]}! 🔥</h3>
+                    <p className="text-[11px] text-gray-400 mt-1 leading-relaxed max-w-xs">
+                      Monitorando progressos individuais no ábaco.
+                    </p>
+                  </div>
+
+                  <div className="p-4 bg-gray-50/50 rounded-2xl border border-gray-100">
+                    <h4 className="text-[10px] font-black uppercase text-gray-400 tracking-wider mb-4">Envios por Período</h4>
+                    <div className="flex items-end justify-between gap-3 h-20 px-2 mb-3">
+                      <div className="w-7 bg-[#635bfc]/20 h-[40%] rounded-lg" />
+                      <div className="w-7 bg-[#635bfc]/45 h-[65%] rounded-lg" />
+                      <div className="w-7 bg-[#635bfc]/25 h-[30%] rounded-lg" />
+                      <div className="w-7 bg-[#635bfc] h-[90%] rounded-lg" />
+                    </div>
+                  </div>
+
+                  <div className="space-y-4">
+                    <h3 className="font-extrabold text-xs text-gray-800 uppercase tracking-wider">Orientadores</h3>
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-3 bg-white p-2 border border-gray-100 rounded-xl">
+                        <img alt="Marta" className="w-9 h-9 rounded-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuB_1Qhc2K70O_H6pLnYXi0wlUW04npQ10lh-Ahke544FXvaIGufKHMGxyQExINqYgvLPncTQpFrBbPfnirVAhyi570nHJzy2IkClpZIuZxLzvUxWTNY0Q4XUchiEZa4WGW-WgnYVeXbXO8weI-lIBtMcKNEdgIBo1gxkQUHmU_Sn7d2DnteeQ952fyIS_LITt1Bnq13sOYEb4nS3XKu0BOQMy-gWnb-dzotte1qoVtShga24gEkueN6cNDzWUZuU-z30YY2Gsn2vpfZ" />
+                        <div className="flex-grow text-left">
+                          <p className="text-xs font-bold text-gray-800">Marta Ferreira</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </motion.aside>
+            </>
+          )}
+        </AnimatePresence>
+
+      </main>
+
+      {/* ==================================================== */}
+      {/* MODAL: GERAR CONVITE (Magic Link)                    */}
+      {/* ==================================================== */}
+      <AnimatePresence>
+        {isLinkModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 0.4 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsLinkModalOpen(false)}
+              className="absolute inset-0 bg-slate-900"
+            />
+            
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 15 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 15 }}
+              className="bg-white rounded-3xl p-6 max-w-md w-full relative z-10 shadow-2xl border border-gray-100 text-left space-y-4"
+            >
+              <div className="flex justify-between items-center pb-2 border-b border-gray-50">
+                <h3 className="font-extrabold text-base text-gray-800 flex items-center gap-2">
+                  <Key className="w-5 h-5 text-brand" />
+                  <span>Gerar Link & Código de Convite</span>
+                </h3>
+                <button onClick={() => setIsLinkModalOpen(false)} className="p-1 rounded-lg hover:bg-gray-50 border-none bg-transparent cursor-pointer">
+                  <X className="w-5 h-5 text-gray-400" />
+                </button>
+              </div>
+
+              {!generatedLinkInfo ? (
+                <form onSubmit={handleGenerateLink} className="space-y-4">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block ml-1">Selecionar Estudante</label>
+                    {students.length === 0 ? (
+                      <input 
+                        type="text"
+                        placeholder="Nome do Aluno (Ex: Leyton Graves)"
+                        value={selectedStudentName}
+                        onChange={(e) => setSelectedStudentName(e.target.value)}
+                        className="w-full bg-gray-50 border border-gray-200 py-2.5 px-4 rounded-xl text-xs text-gray-700 font-bold focus:outline-none focus:ring-2 focus:ring-brand focus:bg-white"
+                        required
+                      />
+                    ) : (
+                      <select
+                        value={selectedStudentName}
+                        onChange={(e) => setSelectedStudentName(e.target.value)}
+                        className="w-full bg-gray-50 border border-gray-200 py-2.5 px-3 rounded-xl text-xs text-gray-700 font-bold focus:outline-none focus:ring-2 focus:ring-brand focus:bg-white"
+                      >
+                        <option value="">Selecione um aluno...</option>
+                        {students.map((student, idx) => (
+                          <option key={idx} value={student.name}>{student.name} ({student.email.split('@')[0]})</option>
+                        ))}
+                      </select>
+                    )}
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block ml-1">Atribuir à Tarefa</label>
+                    {tasks.length === 0 ? (
+                      <p className="text-[10px] text-gray-400 italic bg-gray-50 p-2.5 rounded-xl border border-gray-150">Nenhuma tarefa cadastrada no Supabase.</p>
+                    ) : (
+                      <select
+                        value={selectedTaskId}
+                        onChange={(e) => setSelectedTaskId(e.target.value)}
+                        className="w-full bg-gray-50 border border-gray-200 py-2.5 px-3 rounded-xl text-xs text-gray-700 font-bold focus:outline-none focus:ring-2 focus:ring-brand focus:bg-white"
+                      >
+                        <option value="">Selecione a tarefa...</option>
+                        {tasks.map((task) => (
+                          <option key={task.id} value={task.id}>{task.title}</option>
+                        ))}
+                      </select>
+                    )}
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block ml-1">Tempo de Expiração</label>
+                    <select
+                      value={linkDuration}
+                      onChange={(e) => setLinkDuration(e.target.value)}
+                      className="w-full bg-gray-50 border border-gray-200 py-2.5 px-3 rounded-xl text-xs text-gray-700 font-bold focus:outline-none focus:ring-2 focus:ring-brand focus:bg-white"
+                    >
+                      <option value="1h">1 Hora (Segurança alta)</option>
+                      <option value="4h">4 Horas</option>
+                      <option value="1d">1 Dia</option>
+                      <option value="1w">1 Semana</option>
+                    </select>
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={isCreatingLink || !selectedStudentName}
+                    className="w-full py-3 bg-[#635bfc] hover:bg-[#4f46e5] text-white rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5 cursor-pointer border-none shadow-md shadow-[#635bfc]/10 disabled:opacity-50"
+                  >
+                    {isCreatingLink ? 'Gerando Link...' : 'Gerar Chave e Link de Convite ⚡'}
+                  </button>
+                </form>
+              ) : (
+                <div className="space-y-4 animate-fade-in-up">
+                  <div className="p-4 bg-emerald-50 border border-emerald-100 rounded-2xl space-y-2 text-center">
+                    <CheckCircle className="w-8 h-8 text-emerald-500 mx-auto" />
+                    <h4 className="font-extrabold text-sm text-emerald-800">Convite Gerado com Sucesso!</h4>
+                    <p className="text-[10px] text-gray-500">Envie o código ou o link mágico abaixo para o aluno iniciar.</p>
+                  </div>
+
+                  <div className="space-y-3.5">
+                    <div className="p-3 bg-gray-50 border border-gray-150 rounded-xl flex justify-between items-center">
+                      <div>
+                        <span className="text-[8px] font-black text-gray-400 uppercase tracking-wider block">Código Alfanumérico</span>
+                        <strong className="text-sm font-mono text-gray-800 tracking-wider block mt-0.5">{generatedLinkInfo.code}</strong>
+                      </div>
+                      <button 
+                        onClick={() => {
+                          navigator.clipboard.writeText(generatedLinkInfo.code);
+                          setCopiedLink(true);
+                          setTimeout(() => setCopiedLink(false), 2000);
+                        }}
+                        className="p-2 hover:bg-gray-150 rounded-lg text-brand transition-colors border-none bg-transparent cursor-pointer"
+                        title="Copiar Código"
+                      >
+                        {copiedLink ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
+                      </button>
+                    </div>
+
+                    <div className="p-3 bg-gray-50 border border-gray-150 rounded-xl flex justify-between items-center">
+                      <div className="min-w-0 flex-1">
+                        <span className="text-[8px] font-black text-gray-400 uppercase tracking-wider block">Link de Acesso Direto</span>
+                        <span className="text-[11px] font-mono text-brand truncate block mt-0.5">{generatedLinkInfo.url}</span>
+                      </div>
+                      <button 
+                        onClick={() => {
+                          navigator.clipboard.writeText(generatedLinkInfo.url);
+                          setCopiedLink(true);
+                          setTimeout(() => setCopiedLink(false), 2000);
+                        }}
+                        className="p-2 hover:bg-gray-150 rounded-lg text-brand transition-colors border-none bg-transparent cursor-pointer shrink-0"
+                        title="Copiar Link"
+                      >
+                        {copiedLink ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
+                      </button>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={() => setGeneratedLinkInfo(null)}
+                    className="w-full py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl text-xs font-bold transition-all cursor-pointer border-none"
+                  >
+                    Gerar outro convite
+                  </button>
+                </div>
+              )}
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* ==================================================== */}
+      {/* MODAL: CRIAR TAREFA (Nova Lição)                      */}
+      {/* ==================================================== */}
+      <AnimatePresence>
+        {isTaskModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 0.4 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsTaskModalOpen(false)}
+              className="absolute inset-0 bg-slate-900"
+            />
+            
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 15 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 15 }}
+              className="bg-white rounded-3xl p-6 max-w-lg w-full relative z-10 shadow-2xl border border-gray-100 text-left space-y-4 overflow-y-auto max-h-[90vh] scrollbar-hide"
+            >
+              <div className="flex justify-between items-center pb-2 border-b border-gray-50">
+                <h3 className="font-extrabold text-base text-gray-800 flex items-center gap-2">
+                  <Plus className="w-5 h-5 text-brand" />
+                  <span>Cadastrar Nova Tarefa (Lição)</span>
+                </h3>
+                <button onClick={() => setIsTaskModalOpen(false)} className="p-1 rounded-lg hover:bg-gray-50 border-none bg-transparent cursor-pointer">
+                  <X className="w-5 h-5 text-gray-400" />
+                </button>
+              </div>
+
+              <form onSubmit={handleCreateTask} className="space-y-4">
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block ml-1">Título da Atividade</label>
                   <input 
                     type="text" 
-                    placeholder="Ex: Exercício de Numerais de 0 a 10"
+                    placeholder="Ex: Alfabetização - Família Silábica"
                     value={taskTitle}
                     onChange={(e) => setTaskTitle(e.target.value)}
-                    className="w-full bg-[#121325]/80 border border-white/5 py-2.5 px-4 rounded-xl text-xs text-white focus:outline-none focus:border-purple-500 font-medium"
+                    className="w-full bg-gray-50 border border-gray-200 py-2.5 px-4 rounded-xl text-xs text-gray-700 font-bold focus:outline-none focus:ring-2 focus:ring-brand focus:bg-white"
                     required
                   />
                 </div>
 
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-black uppercase tracking-wider text-slate-500 ml-1">Descrição</label>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block ml-1">Descrição / Instruções</label>
                   <textarea 
-                    placeholder="Instruções para o aluno (Ex: Soletrar os numerais no ábaco)"
+                    placeholder="Instruções para o aluno soletrar a palavra com os blocos..."
                     value={taskDesc}
                     onChange={(e) => setTaskDesc(e.target.value)}
-                    className="w-full bg-[#121325]/80 border border-white/5 py-2.5 px-4 rounded-xl text-xs text-white focus:outline-none focus:border-purple-500 font-medium h-20 resize-none"
+                    className="w-full bg-gray-50 border border-gray-200 py-2.5 px-4 rounded-xl text-xs text-gray-700 font-bold focus:outline-none focus:ring-2 focus:ring-brand focus:bg-white min-h-[80px]"
+                    required
                   />
                 </div>
 
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-black uppercase tracking-wider text-slate-500 ml-1">Idioma Foco</label>
-                  <select
-                    value={taskLang}
-                    onChange={(e) => setTaskLang(e.target.value as any)}
-                    className="w-full bg-[#121325]/80 border border-white/5 py-2.5 px-3.5 rounded-xl text-xs text-white focus:outline-none focus:border-purple-500 font-medium"
-                  >
-                    <option value="pt">Português (Preto)</option>
-                    <option value="en">Inglês (Azul)</option>
-                    <option value="de">Alemão (Vermelho)</option>
-                  </select>
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-black uppercase tracking-wider text-slate-500 ml-1">Palavras-Alvo (separadas por vírgula)</label>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block ml-1">Palavras-Alvo (Separadas por vírgula)</label>
                   <input 
                     type="text" 
-                    placeholder="Ex: DADO, BOLA, SOL"
+                    placeholder="Ex: BOLA, CASA, DADO"
                     value={taskWords}
                     onChange={(e) => setTaskWords(e.target.value)}
-                    className="w-full bg-[#121325]/80 border border-white/5 py-2.5 px-4 rounded-xl text-xs text-white focus:outline-none focus:border-purple-500 font-mono"
+                    className="w-full bg-gray-50 border border-gray-200 py-2.5 px-4 rounded-xl text-xs text-gray-700 font-bold focus:outline-none focus:ring-2 focus:ring-brand focus:bg-white"
                     required
                   />
                 </div>
 
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-black uppercase tracking-wider text-slate-500 ml-1">Data Limite de Entrega</label>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block ml-1">Idioma Foco</label>
+                    <select
+                      value={taskLang}
+                      onChange={(e) => setTaskLang(e.target.value as 'pt' | 'en' | 'de')}
+                      className="w-full bg-gray-50 border border-gray-200 py-2.5 px-3 rounded-xl text-xs text-gray-700 font-bold focus:outline-none focus:ring-2 focus:ring-brand focus:bg-white"
+                    >
+                      <option value="pt">Português 🇧🇷</option>
+                      <option value="en">Inglês 🇺🇸</option>
+                      <option value="de">Alemão 🇩🇪</option>
+                    </select>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block ml-1">Prioridade</label>
+                    <select
+                      value={taskPriority}
+                      onChange={(e) => setTaskPriority(e.target.value as 'Alta' | 'Média' | 'Baixa')}
+                      className="w-full bg-gray-50 border border-gray-200 py-2.5 px-3 rounded-xl text-xs text-gray-700 font-bold focus:outline-none focus:ring-2 focus:ring-brand focus:bg-white"
+                    >
+                      <option value="Alta">Alta</option>
+                      <option value="Média">Média</option>
+                      <option value="Baixa">Baixa</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block ml-1">Prazo Final para Entrega</label>
                   <input 
-                    type="date" 
+                    type="date"
                     value={taskDueDate}
                     onChange={(e) => setTaskDueDate(e.target.value)}
-                    className="w-full bg-[#121325]/80 border border-white/5 py-2.5 px-4 rounded-xl text-xs text-white focus:outline-none focus:border-purple-500 font-medium"
+                    className="w-full bg-gray-50 border border-gray-200 py-2.5 px-4 rounded-xl text-xs text-gray-700 font-bold focus:outline-none focus:ring-2 focus:ring-brand focus:bg-white"
                     required
                   />
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-black uppercase tracking-wider text-slate-500 ml-1">Prioridade</label>
-                  <select
-                    value={taskPriority}
-                    onChange={(e) => setTaskPriority(e.target.value as any)}
-                    className="w-full bg-[#121325]/80 border border-white/5 py-2.5 px-3.5 rounded-xl text-xs text-white focus:outline-none focus:border-purple-500 font-medium"
-                  >
-                    <option value="Alta">Alta</option>
-                    <option value="Média">Média</option>
-                    <option value="Baixa">Baixa</option>
-                  </select>
                 </div>
 
                 <button
                   type="submit"
                   disabled={isCreatingTask}
-                  className="w-full py-3 bg-[#00aa6c] hover:bg-[#00925c] disabled:opacity-40 text-white font-extrabold text-xs rounded-xl shadow-lg active:scale-95 transition-all flex items-center justify-center gap-1.5 cursor-pointer border-none"
+                  className="w-full py-3 bg-[#635bfc] hover:bg-[#4f46e5] text-white rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5 cursor-pointer border-none shadow-md shadow-[#635bfc]/10 disabled:opacity-50"
                 >
-                  {isCreatingTask ? 'Criando...' : 'Salvar e Publicar Tarefa 📝'}
+                  {isCreatingTask ? 'Salvando no Banco...' : 'Criar Lição Persistente 📝'}
                 </button>
-              </motion.form>
-            )}
-
-          </AnimatePresence>
-
-        </div>
-      </aside>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
     </div>
   );
