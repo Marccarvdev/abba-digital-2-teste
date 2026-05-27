@@ -968,15 +968,21 @@ export default function App() {
         if (eX >= boardRect.left - 35 && eX <= boardRect.right + 35) {
           const bottomThreshold = boardRect.bottom - 75;
           const topThreshold = boardRect.top + 75;
+          const vy = dragVelocityRef.current.y; // positive when moving down, negative when moving up
 
-          if (eY > bottomThreshold && eY < boardRect.bottom + 50) {
-            // Highly responsive scroll speed based on proximity to bottom
-            const intensity = Math.min(45, Math.max(2, (eY - bottomThreshold) / 1.8));
-            boardRef.current.scrollBy({ top: intensity });
-          } else if (eY < topThreshold && eY > boardRect.top - 50) {
-            // Highly responsive scroll speed based on proximity to top
-            const intensity = Math.min(45, Math.max(2, (topThreshold - eY) / 1.8));
-            boardRef.current.scrollBy({ top: -intensity });
+          if (eY > bottomThreshold && eY < boardRect.bottom + 100) {
+            const dist = eY - bottomThreshold;
+            // Quadratic base speed + hand velocity boost
+            const baseSpeed = Math.pow(dist / 9, 2);
+            const velocityBoost = vy > 0 ? vy * 16 : 0;
+            const speed = Math.max(2, baseSpeed + velocityBoost);
+            boardRef.current.scrollBy({ top: speed });
+          } else if (eY < topThreshold && eY > boardRect.top - 100) {
+            const dist = topThreshold - eY;
+            const baseSpeed = Math.pow(dist / 9, 2);
+            const velocityBoost = vy < 0 ? Math.abs(vy) * 16 : 0;
+            const speed = Math.max(2, baseSpeed + velocityBoost);
+            boardRef.current.scrollBy({ top: -speed });
           }
         }
       }
@@ -984,12 +990,21 @@ export default function App() {
       // 2. Scroll the Window page vertically if dragging near viewport edges
       const winHeight = window.innerHeight;
       const winThreshold = 140;
+      const vy = dragVelocityRef.current.y;
+      
       if (eY < winThreshold) {
-        const winIntensity = Math.min(55, Math.max(3, (winThreshold - eY) / 1.5));
-        window.scrollBy({ top: -winIntensity });
+        const dist = winThreshold - eY;
+        // Quadratic base speed + hand velocity boost (converted to pixels per frame)
+        const baseSpeed = Math.pow(dist / 14, 2);
+        const velocityBoost = vy < 0 ? Math.abs(vy) * 20 : 0;
+        const speed = Math.max(3, baseSpeed + velocityBoost);
+        window.scrollBy({ top: -speed });
       } else if (eY > winHeight - winThreshold) {
-        const winIntensity = Math.min(55, Math.max(3, (eY - (winHeight - winThreshold)) / 1.5));
-        window.scrollBy({ top: winIntensity });
+        const dist = eY - (winHeight - winThreshold);
+        const baseSpeed = Math.pow(dist / 14, 2);
+        const velocityBoost = vy > 0 ? vy * 20 : 0;
+        const speed = Math.max(3, baseSpeed + velocityBoost);
+        window.scrollBy({ top: speed });
       }
 
       animFrameId = requestAnimationFrame(tick);
