@@ -1118,7 +1118,7 @@ export const AboutSection: React.FC<AboutSectionProps> = ({ onBack }) => {
               </div>
 
               {/* Injeção das miniaturas locais no fluxo tipográfico */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 my-6">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 my-6 max-w-xl mx-auto">
                 {renderThumbnail("https://res.cloudinary.com/dudmozd8z/image/upload/v1779565246/tabvermelho_iuejrf.avif", "Tabela Vermelho", "tables", 0)}
                 {renderThumbnail("https://res.cloudinary.com/dudmozd8z/image/upload/v1779565247/tabazul_eplu2h.avif", "Tabela Azul", "tables", 1)}
                 {renderThumbnail("https://res.cloudinary.com/dudmozd8z/image/upload/v1779565246/tabpreto_dbwmcl.avif", "Tabela Preto", "tables", 2)}
@@ -1137,7 +1137,7 @@ export const AboutSection: React.FC<AboutSectionProps> = ({ onBack }) => {
                 No modelo analógico, usavam-se tabelas em folhas A4 com quadrados de 9 cm² contendo os números correspondentes às letras usadas para escrever de <strong>ZERO a CEM</strong> nas três línguas.
               </p>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 my-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 my-6 max-w-xl mx-auto">
                 {renderThumbnail("https://res.cloudinary.com/dudmozd8z/image/upload/v1779565246/palavras1_hj2w4z.avif", "Palavras Escritas 1", "words", 0)}
                 {renderThumbnail("https://res.cloudinary.com/dudmozd8z/image/upload/v1779565246/palavras2_bky3wy.avif", "Palavras Escritas 2", "words", 1)}
               </div>
@@ -1155,7 +1155,7 @@ export const AboutSection: React.FC<AboutSectionProps> = ({ onBack }) => {
                 A <strong>Teoria Alencarina</strong> defende que existe uma relação de equivalência entre os numerais que formam os números e as letras que formam as palavras em qualquer idioma, servindo como uma amostra fiel de toda a organização gramatical e sináptica do cérebro humano.
               </p>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 my-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 my-6 max-w-xl mx-auto">
                 {renderThumbnail("https://res.cloudinary.com/dudmozd8z/image/upload/v1779565246/palav3_bhesqe.avif", "Frase Escrita 1", "phrases", 0)}
                 {renderThumbnail("https://res.cloudinary.com/dudmozd8z/image/upload/v1779565245/palavr4_qbydb0.avif", "Frase Escrita 2", "phrases", 1)}
               </div>
@@ -1186,7 +1186,7 @@ export const AboutSection: React.FC<AboutSectionProps> = ({ onBack }) => {
                 A meta inicial do projeto é guiar o aluno a escrever de 0 a 100 nos três idiomas na mesma velocidade que escreve em português. A meta final é transferir de forma automática as habilidades de leitura e escrita já consolidadas no idioma materno diretamente para o inglês e o alemão.
               </p>
               
-              <div className="flex flex-col items-center gap-2 my-6">
+              <div className="w-full max-w-sm mx-auto my-6">
                 {renderThumbnail("https://res.cloudinary.com/dudmozd8z/image/upload/v1779565245/painel_k2fqw5.avif", "O Painel Magnético do ABBA", "panel", 0, "aspect-video", true)}
               </div>
             </section>
@@ -1200,7 +1200,7 @@ export const AboutSection: React.FC<AboutSectionProps> = ({ onBack }) => {
                 O insight original nasceu em Blumenau (SC), cidade onde famílias preservam o alemão clássico da colonização, combinado com a experiência de José Décio como tradutor em feiras industriais de Frankfurt, na Alemanha. Ao notar conexões exatas como a transição fonética das letras <strong>D</strong> e <strong>TH</strong> (onde <em>Three</em> vira <em>Drei</em>), o sistema ganhou vida.
               </p>
 
-              <div className="flex flex-col items-center gap-2 my-6">
+              <div className="w-full max-w-sm mx-auto my-6">
                 {renderThumbnail("https://res.cloudinary.com/dudmozd8z/image/upload/v1779565508/habenter_cfxsmy.avif", "A Camiseta Bordada do ABBA", "shirt", 0, "aspect-video", true)}
               </div>
             </section>
