@@ -411,12 +411,20 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ user, onLogo
           studentName: s.student_name,
           taskTitle: s.task_title,
           submittedAt: s.submitted_at,
-          spelledWords: []
+          spelledWords: typeof s.spelled_words === 'string'
+            ? JSON.parse(s.spelled_words)
+            : s.spelled_words || [],
+          taskFiles: typeof s.task_files === 'string'
+            ? JSON.parse(s.task_files)
+            : s.task_files || []
         }));
         setSubmissions(prev => {
           const merged = [...prev];
           mappedSubs.forEach(ms => {
-            if (!merged.some(x => x.studentName === ms.studentName && x.taskTitle === ms.taskTitle)) {
+            const index = merged.findIndex(x => x.id === ms.id || (x.studentName === ms.studentName && x.taskTitle === ms.taskTitle));
+            if (index !== -1) {
+              merged[index] = { ...merged[index], ...ms };
+            } else {
               merged.unshift(ms);
             }
           });
@@ -1757,8 +1765,36 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ user, onLogo
                           </div>
                         </div>
 
-                        <div className="flex items-center gap-3">
-                          <span className="px-3 py-1 bg-blue-50 text-[#005bb3] text-[10px] font-bold rounded-full">
+                        <div className="flex items-center gap-3 flex-wrap md:flex-nowrap">
+                          {sub.taskFiles && sub.taskFiles.length > 0 && (
+                            <div className="flex flex-wrap gap-1.5 mr-2">
+                              {sub.taskFiles.map((file, fIdx) => (
+                                file.url ? (
+                                  <a
+                                    key={fIdx}
+                                    href={file.url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="flex items-center gap-1 px-2.5 py-1 bg-slate-50 hover:bg-slate-100 border border-slate-200 hover:border-slate-300 rounded-lg text-[10px] font-semibold text-slate-600 transition-all no-underline"
+                                    title={`Abrir ${file.name}`}
+                                  >
+                                    <span className="material-symbols-outlined text-[13px] text-slate-400">download</span>
+                                    <span className="truncate max-w-[100px]">{file.name}</span>
+                                  </a>
+                                ) : (
+                                  <span
+                                    key={fIdx}
+                                    className="flex items-center gap-1 px-2.5 py-1 bg-slate-50 border border-slate-100 rounded-lg text-[10px] font-semibold text-slate-400"
+                                    title={`${file.name} (Salvo apenas localmente)`}
+                                  >
+                                    <span className="material-symbols-outlined text-[13px]">file_present</span>
+                                    <span className="truncate max-w-[100px]">{file.name}</span>
+                                  </span>
+                                )
+                              ))}
+                            </div>
+                          )}
+                          <span className="px-3 py-1 bg-blue-50 text-[#005bb3] text-[10px] font-bold rounded-full shrink-0">
                             {sub.spelledWords.length} Palavras
                           </span>
                           <button

@@ -61,6 +61,7 @@ export interface StudentSubmission {
   taskTitle: string;
   submittedAt: string;
   spelledWords: SavedWord[];
+  taskFiles?: { name: string; size: string; url?: string }[];
 }
 
 export interface AccessCode {
