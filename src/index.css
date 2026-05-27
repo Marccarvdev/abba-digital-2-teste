@@ -366,3 +366,8 @@ html {
   grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
   gap: 16px;
 }
+.mask-gradient {
+  mask-image: linear-gradient(to bottom, black 35%, transparent 100%);
+  -webkit-mask-image: linear-gradient(to bottom, black 35%, transparent 100%);
+}
+
