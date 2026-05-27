@@ -182,12 +182,21 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess, onGoTo
     // 2. First, check if this matches our 6-char alphanumeric registry!
     const registryKey = 'abba_invite_codes_registry';
     let matchedRecord = null;
-    try {
-      const localRegistry = localStorage.getItem(registryKey);
-      const registryList = localRegistry ? JSON.parse(localRegistry) : [];
-      matchedRecord = registryList.find((item: any) => item.code === cleanCode);
-    } catch (err) {
-      console.error('Error looking up registry code:', err);
+    if (cleanCode === 'ALUNO123') {
+      matchedRecord = {
+        code: 'ALUNO123',
+        name: 'Aluno Fixo',
+        codeId: 'student-fixed-id',
+        expiresAt: Date.now() + 365 * 24 * 60 * 60 * 1000
+      };
+    } else {
+      try {
+        const localRegistry = localStorage.getItem(registryKey);
+        const registryList = localRegistry ? JSON.parse(localRegistry) : [];
+        matchedRecord = registryList.find((item: any) => item.code === cleanCode);
+      } catch (err) {
+        console.error('Error looking up registry code:', err);
+      }
     }
 
     if (matchedRecord) {
@@ -264,35 +273,6 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess, onGoTo
             login_method: 'code'
           }
         ]);
-
-        // Sincronizar na tabela 'students'
-        const { data: existingStudents } = await supabase
-          .from('students')
-          .select('*')
-          .eq('name', matchedRecord.name);
-
-        if (existingStudents && existingStudents.length > 0) {
-          await supabase.from('students').update({
-            last_access_at: new Date().toISOString(),
-            email: emailLower,
-            login_method: 'code'
-          }).eq('id', existingStudents[0].id);
-        } else {
-          await supabase.from('students').insert([
-            {
-              id: matchedRecord.codeId || `st-${Date.now()}`,
-              name: matchedRecord.name,
-              email: emailLower,
-              class: "Turma A - 3º Ano",
-              img: `https://images.unsplash.com/photo-${1535713875002 + Math.floor(Math.random() * 100)}?auto=format&fit=crop&q=80&w=150&h=150`,
-              progress: 0,
-              matricula: `2026${Math.floor(1000 + Math.random() * 9000)}`,
-              gender: 'M',
-              last_access_at: new Date().toISOString(),
-              login_method: 'code'
-            }
-          ]);
-        }
       } catch (dbErr) {
         console.warn('Erro ao registrar login do estudante no Supabase:', dbErr);
       }
@@ -395,35 +375,6 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess, onGoTo
             login_method: 'link'
           }
         ]);
-
-        // Sincronizar na tabela 'students'
-        const { data: existingStudents } = await supabase
-          .from('students')
-          .select('*')
-          .eq('name', sessionData.name);
-
-        if (existingStudents && existingStudents.length > 0) {
-          await supabase.from('students').update({
-            last_access_at: new Date().toISOString(),
-            email: `student-${sessionData.codeId}@abba.com`,
-            login_method: 'link'
-          }).eq('id', existingStudents[0].id);
-        } else {
-          await supabase.from('students').insert([
-            {
-              id: sessionData.codeId || `st-${Date.now()}`,
-              name: sessionData.name,
-              email: `student-${sessionData.codeId}@abba.com`,
-              class: "Turma A - 3º Ano",
-              img: `https://images.unsplash.com/photo-${1535713875002 + Math.floor(Math.random() * 100)}?auto=format&fit=crop&q=80&w=150&h=150`,
-              progress: 0,
-              matricula: `2026${Math.floor(1000 + Math.random() * 9000)}`,
-              gender: 'M',
-              last_access_at: new Date().toISOString(),
-              login_method: 'link'
-            }
-          ]);
-        }
       } catch (dbErr) {
         console.warn('Erro ao registrar login do estudante no Supabase:', dbErr);
       }
@@ -449,7 +400,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess, onGoTo
       return;
     }
 
-    if (trimmed === 'ABC123DEF') {
+    if (trimmed === 'ABC123DEF' || trimmed === 'PROF123') {
       const teacherUser: User = {
         name: 'Professor Décio Silva',
         email: 'teacher@abba.com',
@@ -460,7 +411,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess, onGoTo
         onLoginSuccess(teacherUser);
       }, 1000);
     } else {
-      setErrorMsg('Código incorreto. Tente "ABC123DEF" para demonstração.');
+      setErrorMsg('Código incorreto. Tente "PROF123" para demonstração.');
     }
   };
 
@@ -486,348 +437,415 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess, onGoTo
     }
   };
 
-  const handleUnifiedCodeSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    const trimmed = accessCode.trim().toUpperCase();
-    if (trimmed === 'ABC123DEF') {
-      handleTeacherCodeLogin(e);
-    } else {
-      handleCodeLogin(e);
-    }
+  const glassBackgroundStyle: React.CSSProperties = {
+    backgroundImage: `radial-gradient(circle at 20% 30%, #d6e3ff 0%, transparent 40%), 
+                      radial-gradient(circle at 80% 70%, #dae2fd 0%, transparent 40%)`
   };
 
-  const isStudentCode = accessCode.trim().length === 6 && accessCode.trim().toUpperCase() !== 'ABC123DEF';
-
   return (
-    <div className="min-h-screen bg-[#d3d8e0] flex items-center justify-center p-4 relative overflow-hidden font-sans select-none selection:bg-blue-100 selection:text-slate-900">
+    <div className="min-h-screen flex flex-col bg-[#faf8ff] selection:bg-[#d6e3ff] selection:text-[#001b3d] text-[#131b2e] font-sans">
       
-      {/* Background Mountain Image underlay */}
-      <img 
-        src="https://res.cloudinary.com/dudmozd8z/image/upload/q_auto/f_auto/v1778857528/montain_uqtkyt.avif" 
-        alt="Fundo Montanha" 
-        className="absolute inset-0 w-full h-full object-cover -z-10 scale-105 brightness-[0.75] mask-gradient" 
-      />
-      
-      {/* White Main Box container */}
-      <div className="w-full max-w-[960px] min-h-[640px] md:h-[640px] bg-white rounded-[32px] shadow-2xl flex flex-col md:flex-row overflow-hidden relative border border-white/20 z-10">
+      {/* HEADER COMPONENT */}
+      <header className="flex justify-between items-center px-6 sm:px-10 h-16 w-full bg-white border-b border-[#c1c6d6]/30">
+        <div className="font-extrabold text-xl text-[#000000] flex items-center gap-2 cursor-pointer" onClick={() => setIsTeacherCodeMode(false)}>
+          <img 
+            src="https://res.cloudinary.com/dudmozd8z/image/upload/v1779315941/logoabra2_kls3we.svg" 
+            alt="ABBA Logo" 
+            className="w-8 h-8 object-contain"
+          />
+          ABBA DIGITAL
+        </div>
+        <div className="flex items-center gap-4">
+          <button 
+            type="button" 
+            onClick={() => setIsTeacherCodeMode(prev => !prev)}
+            className="font-semibold text-xs sm:text-sm text-[#005bb3] hover:text-[#00468c] transition-colors cursor-pointer"
+          >
+            {isTeacherCodeMode ? 'Área do Aluno' : 'Área do Professor'}
+          </button>
+          <span className="font-medium text-xs sm:text-sm text-[#5b5f61] cursor-pointer hover:text-[#005bb3] transition-colors">
+            Help
+          </span>
+        </div>
+      </header>
+
+      {/* MAIN CONTAINER */}
+      <main className="flex-grow flex items-center justify-center p-6 glass-background relative overflow-hidden bg-[#faf8ff]" style={glassBackgroundStyle}>
         
-        {/* Left half (Login Form fields) */}
-        <div className="w-full md:w-1/2 h-full px-6 py-8 sm:px-12 sm:py-10 flex flex-col justify-between text-left gap-6 overflow-y-auto">
+        {/* Abstract background elements */}
+        <div className="absolute top-[-10%] left-[-5%] w-[400px] h-[400px] bg-[#d6e3ff] opacity-20 rounded-full blur-[100px]"></div>
+        <div className="absolute bottom-[-10%] right-[-5%] w-[300px] h-[300px] bg-[#dae2fd] opacity-30 rounded-full blur-[80px]"></div>
+        
+        <div className="w-full max-w-[520px] bg-white rounded-2xl border border-[#c1c6d6] shadow-[0_20px_40px_rgba(0,93,183,0.08)] p-6 sm:p-8 relative z-10">
           
-          {/* Header/Logo */}
-          <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 bg-slate-800 rounded-xl rotate-45 flex items-center justify-center shadow-md shadow-slate-900/10 shrink-0">
-              <img 
-                src="https://res.cloudinary.com/dudmozd8z/image/upload/v1779315941/logoabra2_kls3we.svg" 
-                alt="ABBA Logo" 
-                className="w-5 h-5 -rotate-45 object-contain"
-              />
-            </div>
-            <div className="text-left">
-              <h2 className="text-slate-900 font-extrabold text-base leading-none tracking-tight">ABBA DIGITAL</h2>
-              <span className="text-slate-400 text-[10px] font-bold uppercase tracking-wider block mt-0.5">Portal da Educação</span>
-            </div>
-          </div>
-
-          {/* Form and Controls */}
-          <div className="w-full flex flex-col gap-4 my-auto max-w-[340px] mx-auto">
-            <div className="text-left">
-              <h3 className="text-2xl font-black tracking-tight text-slate-900 leading-tight">Olá, bem-vindo<br /> de volta! 👋🏽</h3>
-              <p className="text-slate-400 text-xs font-medium mt-1">
-                {activeTab === 'code' 
-                  ? 'Insira o seu código para entrar na plataforma.' 
-                  : 'Insira suas credenciais de professor para acessar.'}
-              </p>
-            </div>
-
-            {/* Offline notification badge */}
-            <AnimatePresence>
-              {!isOnline && (
-                <motion.div 
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: 'auto' }}
-                  exit={{ opacity: 0, height: 0 }}
-                  className="p-3 bg-[#ffdad6] text-[#93000a] rounded-xl border border-red-200 text-[11px] leading-tight flex items-start gap-2"
-                >
-                  <span className="material-symbols-outlined shrink-0 text-red-600 text-[16px] mt-0.5">wifi_off</span>
-                  <div>
-                    <span className="font-bold block">Você está offline!</span>
-                    Login por e-mail desativado. Use seu **Código de Acesso Único** simples para entrar localmente.
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-
-            {/* Error and Success Notifications */}
-            <AnimatePresence>
-              {errorMsg && (
-                <motion.div 
-                  initial={{ opacity: 0 }} 
-                  animate={{ opacity: 1 }} 
-                  className="p-3 bg-red-50 border-l-4 border-red-500 text-red-700 text-xs font-bold rounded-r-xl"
-                >
-                  {errorMsg}
-                </motion.div>
-              )}
-              {successMsg && (
-                <motion.div 
-                  initial={{ opacity: 0 }} 
-                  animate={{ opacity: 1 }} 
-                  className="p-3 bg-green-50 border-l-4 border-green-500 text-green-700 text-xs font-bold rounded-r-xl"
-                >
-                  {successMsg}
-                </motion.div>
-              )}
-            </AnimatePresence>
-
-            {/* Small Modern Segmented Sliders tabs control */}
-            <div className="flex bg-slate-100 p-1 rounded-xl mb-1">
-              <button
-                type="button"
-                onClick={() => setActiveTab('code')}
-                className={`flex-grow py-2 rounded-lg font-bold text-xs transition-all cursor-pointer border-none ${
-                  activeTab === 'code'
-                    ? 'bg-white text-slate-900 shadow-sm'
-                    : 'text-slate-500 hover:text-slate-900 bg-transparent'
-                }`}
-              >
-                Entrar com Código
-              </button>
-              <button
-                type="button"
-                onClick={() => isOnline && setActiveTab('email')}
-                disabled={!isOnline}
-                className={`flex-grow py-2 rounded-lg font-bold text-xs transition-all cursor-pointer border-none ${
-                  activeTab === 'email'
-                    ? 'bg-white text-slate-900 shadow-sm'
-                    : 'text-slate-500 hover:text-slate-900 bg-transparent'
-                } ${!isOnline ? 'opacity-40 cursor-not-allowed' : ''}`}
-              >
-                E-mail e Senha
-              </button>
-            </div>
-
-            {/* Main Fields Form */}
-            <form 
-              onSubmit={activeTab === 'code' ? handleUnifiedCodeSubmit : handleEmailLogin}
-              className="space-y-3.5"
-            >
-              {activeTab === 'code' ? (
-                // TAB 1: CODE LOGIN (STUDENTS / TEACHERS DEMO)
-                <div className="space-y-3">
-                  
-                  {/* Code Input Field */}
-                  <div className="w-full bg-white border-2 border-slate-100 p-3 rounded-2xl flex items-center justify-between gap-3 shadow-inner shadow-slate-50 focus-within:border-slate-300 transition-all">
-                    <div className="flex items-center gap-3.5 w-full">
-                      <div className="p-2.5 bg-slate-50 text-slate-700 rounded-xl border border-slate-100 shrink-0 flex items-center justify-center">
-                        <span className="material-symbols-outlined text-[18px]">vpn_key</span>
-                      </div>
-                      <div className="flex-grow text-left">
-                        <span className="text-slate-400 text-[11px] font-bold block leading-none">Código de Acesso</span>
-                        <input
-                          type="text"
-                          placeholder="Ex: ABC123DEF ou NKOHML"
-                          className="text-slate-900 text-sm font-bold block mt-1 w-full bg-transparent border-none outline-none focus:ring-0 p-0 font-mono uppercase tracking-wider"
-                          value={accessCode}
-                          onChange={(e) => {
-                            setAccessCode(e.target.value);
-                            setAlphanumericCode(e.target.value);
-                          }}
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Dynamic Student E-mail field disclosure */}
-                  <AnimatePresence>
-                    {isStudentCode && (
-                      <motion.div 
-                        initial={{ opacity: 0, height: 0 }}
-                        animate={{ opacity: 1, height: 'auto' }}
-                        exit={{ opacity: 0, height: 0 }}
-                        className="w-full bg-white border-2 border-slate-100 p-3 rounded-2xl flex items-center justify-between gap-3 shadow-inner shadow-slate-50 focus-within:border-slate-300 transition-all"
-                      >
-                        <div className="flex items-center gap-3.5 w-full">
-                          <div className="p-2.5 bg-slate-50 text-slate-700 rounded-xl border border-slate-100 shrink-0 flex items-center justify-center">
-                            <span className="material-symbols-outlined text-[18px]">mail</span>
-                          </div>
-                          <div className="flex-grow text-left">
-                            <span className="text-slate-400 text-[11px] font-bold block leading-none">Seu E-mail (Gmail ou Outlook)</span>
-                            <input
-                              type="email"
-                              placeholder="exemplo@gmail.com"
-                              className="text-slate-900 text-sm font-bold block mt-1 w-full bg-transparent border-none outline-none focus:ring-0 p-0"
-                              value={studentEmailInput}
-                              onChange={(e) => setStudentEmailInput(e.target.value)}
-                            />
-                          </div>
-                        </div>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
+          {/* Subtelas Toggle based on isTeacherCodeMode state */}
+          {!isTeacherCodeMode ? (
+            // SUBTELA 1: GENERAL LOGIN (STUDENTS / E-MAIL)
+            <>
+              {/* Branding & Title */}
+              <div className="text-center mb-6 sm:mb-8">
+                <div className="inline-flex items-center justify-center w-16 h-16 bg-[#0073e0] text-white rounded-2xl mb-4 shadow-sm">
+                  <span className="material-symbols-outlined text-white text-[32px]" style={{ fontVariationSettings: "'FILL' 1" }}>
+                    school
+                  </span>
                 </div>
-              ) : (
-                // TAB 2: EMAIL LOGIN (TEACHERS STANDARD)
-                <div className="space-y-3">
-                  
-                  {/* Teacher E-mail */}
-                  <div className="w-full bg-white border-2 border-slate-100 p-3 rounded-2xl flex items-center justify-between gap-3 shadow-inner shadow-slate-50 focus-within:border-slate-300 transition-all">
-                    <div className="flex items-center gap-3.5 w-full">
-                      <div className="p-2.5 bg-slate-50 text-slate-700 rounded-xl border border-slate-100 shrink-0 flex items-center justify-center">
-                        <span className="material-symbols-outlined text-[18px]">mail</span>
-                      </div>
-                      <div className="flex-grow text-left">
-                        <span className="text-slate-400 text-[11px] font-bold block leading-none">E-mail do Professor</span>
-                        <input
+                <h1 className="font-extrabold text-2xl tracking-tight text-[#131b2e] mb-1">
+                  Bem-vindo(a) ao Abba digital
+                </h1>
+                <p className="text-xs text-[#414754]">
+                  Acesse sua conta para continuar aprendendo
+                </p>
+              </div>
+
+              {/* Status Alert (Offline warning banner) */}
+              <AnimatePresence>
+                {!isOnline && (
+                  <motion.div 
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    className="mb-4 p-4 bg-[#ffdad6] text-[#93000a] rounded-xl border border-red-200 flex items-start gap-3 text-xs"
+                  >
+                    <span className="material-symbols-outlined shrink-0 text-red-600 mt-0.5">wifi_off</span>
+                    <div>
+                      <span className="font-bold block mb-1">Você está Offline!</span>
+                      Login por e-mail indisponível. Utilize seu **Código de Acesso Único** fornecido pelo professor para acessar o aplicativo localmente.
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              {/* Error and Success Notifications */}
+              <AnimatePresence>
+                {errorMsg && (
+                  <motion.div 
+                    initial={{ opacity: 0 }} 
+                    animate={{ opacity: 1 }} 
+                    className="mb-4 p-3.5 bg-red-50 border-l-4 border-red-500 text-red-700 text-xs font-semibold rounded-xl"
+                  >
+                    {errorMsg}
+                  </motion.div>
+                )}
+                {successMsg && (
+                  <motion.div 
+                    initial={{ opacity: 0 }} 
+                    animate={{ opacity: 1 }} 
+                    className="mb-4 p-3.5 bg-green-50 border-l-4 border-green-500 text-green-700 text-xs font-semibold rounded-xl"
+                  >
+                    {successMsg}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              {/* Tab Switcher */}
+              <div className="flex border-b border-[#c1c6d6] mb-6">
+                <button 
+                  type="button" 
+                  onClick={() => isOnline && setActiveTab('email')}
+                  disabled={!isOnline}
+                  className={`flex-1 py-2.5 font-semibold text-xs sm:text-sm border-b-2 transition-all duration-200 cursor-pointer ${
+                    activeTab === 'email'
+                      ? 'border-[#005bb3] text-[#005bb3]'
+                      : 'border-transparent text-[#414754] hover:text-[#131b2e]'
+                  } ${!isOnline ? 'opacity-40 cursor-not-allowed' : ''}`}
+                  id="tab-email"
+                >
+                  E-mail
+                </button>
+                <button 
+                  type="button" 
+                  onClick={() => setActiveTab('code')}
+                  className={`flex-1 py-2.5 font-semibold text-xs sm:text-sm border-b-2 transition-all duration-200 cursor-pointer ${
+                    activeTab === 'code'
+                      ? 'border-[#005bb3] text-[#005bb3]'
+                      : 'border-transparent text-[#414754] hover:text-[#131b2e]'
+                  }`}
+                  id="tab-code"
+                >
+                  Entrar com código
+                </button>
+              </div>
+
+              {/* Login Form */}
+              <form 
+                onSubmit={activeTab === 'email' ? handleEmailLogin : handleCodeLogin} 
+                className="space-y-4 sm:space-y-5"
+              >
+                
+                {activeTab === 'email' ? (
+                  // TAB: EMAIL LOGIN FIELDS
+                  <>
+                    <div className="space-y-1">
+                      <label className="text-xs font-semibold text-[#414754] ml-1" htmlFor="email">
+                        E-mail
+                      </label>
+                      <div className="relative group">
+                        <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-[#005bb3] transition-colors">
+                          mail
+                        </span>
+                        <input 
+                          className="w-full pl-11 pr-4 py-3 bg-[#faf8ff] border border-[#c1c6d6] rounded-lg focus:ring-2 focus:ring-[#005bb3]/20 focus:border-[#005bb3] outline-none transition-all text-xs sm:text-sm text-[#131b2e] placeholder:text-slate-400/60" 
+                          id="email" 
+                          placeholder="nome@exemplo.com" 
                           type="email"
-                          placeholder="professor@email.com"
-                          className="text-slate-900 text-sm font-bold block mt-1 w-full bg-transparent border-none outline-none focus:ring-0 p-0"
                           value={email}
                           onChange={(e) => setEmail(e.target.value)}
                         />
                       </div>
                     </div>
-                  </div>
 
-                  {/* Teacher Password */}
-                  <div className="w-full bg-white border-2 border-slate-100 p-3 rounded-2xl flex items-center justify-between gap-3 shadow-inner shadow-slate-50 focus-within:border-slate-300 transition-all">
-                    <div className="flex items-center gap-3.5 w-full">
-                      <div className="p-2.5 bg-slate-50 text-slate-700 rounded-xl border border-slate-100 shrink-0 flex items-center justify-center">
-                        <span className="material-symbols-outlined text-[18px]">lock</span>
+                    <div className="space-y-1">
+                      <div className="flex justify-between items-center px-1">
+                        <label className="text-xs font-semibold text-[#414754]" htmlFor="password">
+                          Senha
+                        </label>
+                        <a className="text-[11px] text-[#005bb3] hover:underline font-semibold" href="#">
+                          Esqueci minha senha
+                        </a>
                       </div>
-                      <div className="flex-grow text-left">
-                        <span className="text-slate-400 text-[11px] font-bold block leading-none">Senha</span>
-                        <input
+                      <div className="relative group">
+                        <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-[#005bb3] transition-colors">
+                          lock
+                        </span>
+                        <input 
+                          className="w-full pl-11 pr-11 py-3 bg-[#faf8ff] border border-[#c1c6d6] rounded-lg focus:ring-2 focus:ring-[#005bb3]/20 focus:border-[#005bb3] outline-none transition-all text-xs sm:text-sm text-[#131b2e]" 
+                          id="password" 
+                          placeholder="••••••••" 
                           type={showPassword ? 'text' : 'password'}
-                          placeholder="••••••••"
-                          className="text-slate-900 text-sm font-bold block mt-1 w-full bg-transparent border-none outline-none focus:ring-0 p-0"
                           value={password}
                           onChange={(e) => setPassword(e.target.value)}
                         />
+                        <button 
+                          className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-[#131b2e] transition-colors cursor-pointer border-none bg-transparent" 
+                          type="button"
+                          onClick={() => setShowPassword(prev => !prev)}
+                        >
+                          <span className="material-symbols-outlined text-[20px]">
+                            {showPassword ? 'visibility_off' : 'visibility'}
+                          </span>
+                        </button>
                       </div>
-                      <button 
-                        type="button"
-                        onClick={() => setShowPassword(prev => !prev)}
-                        className="text-slate-400 hover:text-slate-600 transition-colors border-none bg-transparent cursor-pointer shrink-0"
-                      >
-                        <span className="material-symbols-outlined text-[18px]">
-                          {showPassword ? 'visibility_off' : 'visibility'}
-                        </span>
-                      </button>
                     </div>
+                  </>
+                ) : (
+                  // TAB: STUDENT CODE FIELDS
+                  <div className="space-y-4">
+                    <div className="space-y-1">
+                      <label className="text-xs font-semibold text-[#414754] ml-1" htmlFor="access-code">
+                        Código de Acesso
+                      </label>
+                      <div className="relative group">
+                        <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-[#005bb3] transition-colors">
+                          key
+                        </span>
+                        <input 
+                          className="w-full pl-11 pr-4 py-3 bg-[#faf8ff] border border-[#c1c6d6] rounded-lg focus:ring-2 focus:ring-[#005bb3]/20 focus:border-[#005bb3] outline-none transition-all text-xs sm:text-sm text-[#131b2e] placeholder:text-slate-400/60 font-mono" 
+                          id="access-code" 
+                          placeholder="Digite seu código (ex: NKOHML)" 
+                          type="text"
+                          value={accessCode}
+                          onChange={(e) => setAccessCode(e.target.value)}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-xs font-semibold text-[#414754] ml-1" htmlFor="student-email">
+                        E-mail de Acesso (Gmail ou Outlook)
+                      </label>
+                      <div className="relative group">
+                        <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-[#005bb3] transition-colors">
+                          mail
+                        </span>
+                        <input 
+                          className="w-full pl-11 pr-4 py-3 bg-[#faf8ff] border border-[#c1c6d6] rounded-lg focus:ring-2 focus:ring-[#005bb3]/20 focus:border-[#005bb3] outline-none transition-all text-xs sm:text-sm text-[#131b2e] placeholder:text-slate-400/60" 
+                          id="student-email" 
+                          placeholder="Ex: seu.nome@gmail.com" 
+                          type="email"
+                          value={studentEmailInput}
+                          onChange={(e) => setStudentEmailInput(e.target.value)}
+                        />
+                      </div>
+                    </div>
+                    
+                    <p className="text-[11px] text-[#414754] px-1 leading-normal">
+                      Insira o seu código de acesso simples de 6 dígitos e seu e-mail do Gmail ou Outlook para autenticar instantaneamente!
+                    </p>
                   </div>
-                </div>
+                )}
+
+                <button 
+                  className="w-full bg-[#0073e0] text-[#fefcff] font-semibold text-xs sm:text-sm py-3 sm:py-3.5 rounded-lg hover:shadow-lg hover:shadow-[#005bb3]/20 active:scale-[0.98] transition-all duration-200 cursor-pointer border-none" 
+                  type="submit"
+                >
+                  Entrar na Plataforma
+                </button>
+              </form>
+
+              {/* Social Login Divider (Only online) */}
+              {isOnline && (
+                <>
+                  <div className="flex items-center my-6">
+                    <div className="flex-grow border-t border-[#c1c6d6]"></div>
+                    <span className="px-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                      Ou entrar com
+                    </span>
+                    <div className="flex-grow border-t border-[#c1c6d6]"></div>
+                  </div>
+
+                  {/* Social Buttons */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <button 
+                      onClick={() => handleSocialLogin('google')}
+                      className="flex items-center justify-center gap-2 py-3 px-3 border border-[#c1c6d6] rounded-lg bg-[#faf8ff] hover:bg-[#eaedff] transition-colors active:scale-[0.98] cursor-pointer"
+                    >
+                      <img alt="Google" className="w-5 h-5 object-contain" src="src/assets/icons/Google logo.svg" />
+                      <span className="font-semibold text-xs sm:text-sm text-[#131b2e]">Google</span>
+                    </button>
+                    <button 
+                      onClick={() => handleSocialLogin('microsoft')}
+                      className="flex items-center justify-center gap-2 py-3 px-3 border border-[#c1c6d6] rounded-lg bg-[#faf8ff] hover:bg-[#eaedff] transition-colors active:scale-[0.98] cursor-pointer"
+                    >
+                      <img alt="Microsoft" className="w-5 h-5 object-contain" src="src/assets/icons/Microsoft_logo.svg" />
+                      <span className="font-semibold text-xs sm:text-sm text-[#131b2e]">Microsoft</span>
+                    </button>
+                  </div>
+                </>
               )}
 
-              {/* Submission Button */}
-              <button 
-                type="submit"
-                className="w-full bg-slate-950 hover:bg-slate-900 text-white font-bold text-sm py-4 rounded-2xl transition-all active:scale-[0.99] shadow-md shadow-slate-950/10 cursor-pointer border-none"
-              >
-                Acessar
-              </button>
-            </form>
+              {/* Bottom Signup Link */}
+              <p className="text-center mt-6 sm:mt-8 text-xs sm:text-sm text-[#414754]">
+                Não tem uma conta?{' '}
+                <button 
+                  onClick={onGoToSignup}
+                  className="text-[#005bb3] font-bold hover:underline cursor-pointer border-none bg-transparent"
+                >
+                  Crie uma agora
+                </button>
+              </p>
+            </>
+          ) : (
+            // SUBTELA 2: TEACHER EXCLUSIVE LOGIN (ALPHANUMERIC CODE)
+            <>
+              {/* Branding & Title */}
+              <div className="text-center mb-6 sm:mb-8">
+                <div className="inline-flex items-center justify-center w-16 h-16 bg-[#0073e0] text-white rounded-2xl mb-4 shadow-sm">
+                  <span className="material-symbols-outlined text-white text-[32px]" style={{ fontVariationSettings: "'FILL' 1" }}>
+                    school
+                  </span>
+                </div>
+                <h1 className="font-extrabold text-2xl tracking-tight text-[#131b2e] mb-1">
+                  Login do Professor
+                </h1>
+                <p className="text-xs text-[#414754]">
+                  Acesse sua conta para entrar
+                </p>
+              </div>
 
-            {/* Social logins option if online */}
-            {isOnline && (
-              <>
-                <div className="flex items-center justify-between my-1">
-                  <div className="h-[1px] bg-slate-100 flex-1"></div>
-                  <span className="text-slate-400 text-[10px] font-black uppercase px-3 tracking-widest">ou</span>
-                  <div className="h-[1px] bg-slate-100 flex-1"></div>
+              {/* Error and Success Notifications */}
+              <AnimatePresence>
+                {errorMsg && (
+                  <motion.div 
+                    initial={{ opacity: 0 }} 
+                    animate={{ opacity: 1 }} 
+                    className="mb-4 p-3.5 bg-red-50 border-l-4 border-red-500 text-red-700 text-xs font-semibold rounded-xl"
+                  >
+                    {errorMsg}
+                  </motion.div>
+                )}
+                {successMsg && (
+                  <motion.div 
+                    initial={{ opacity: 0 }} 
+                    animate={{ opacity: 1 }} 
+                    className="mb-4 p-3.5 bg-green-50 border-l-4 border-green-500 text-green-700 text-xs font-semibold rounded-xl"
+                  >
+                    {successMsg}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              {/* Login Form */}
+              <form onSubmit={handleTeacherCodeLogin} className="space-y-5">
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-[#414754] ml-1" htmlFor="alphanumeric-code">
+                    Código de Acesso Alfanumérico
+                  </label>
+                  <div className="relative group">
+                    <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-[#005bb3] transition-colors">
+                      vpn_key
+                    </span>
+                    <input 
+                      className="w-full pl-11 pr-4 py-3 bg-[#faf8ff] border border-[#c1c6d6] rounded-lg focus:ring-2 focus:ring-[#005bb3]/20 focus:border-[#005bb3] outline-none transition-all text-xs sm:text-sm text-[#131b2e] placeholder:text-slate-400/60 font-mono tracking-widest" 
+                      id="alphanumeric-code" 
+                      placeholder="Ex: ABC123DEF" 
+                      type="text"
+                      value={alphanumericCode}
+                      onChange={(e) => setAlphanumericCode(e.target.value)}
+                    />
+                  </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
-                  <button 
-                    type="button"
-                    onClick={() => handleSocialLogin('google')}
-                    className="border-2 border-slate-100 hover:bg-slate-50 bg-white px-4 py-3 rounded-2xl transition-all active:scale-[0.98] flex items-center gap-2 text-left cursor-pointer"
-                  >
-                    <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24" width="24" height="24" xmlns="http://www.w3.org/2000/svg"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" fill="#EA4335"/></svg>
-                    <div>
-                      <span className="text-slate-400 text-[9px] font-bold block leading-none">Google</span>
-                      <span className="text-slate-800 text-[10px] font-black block mt-0.5">Acesso Rápido</span>
-                    </div>
-                  </button>
-                  <button 
-                    type="button"
-                    onClick={() => handleSocialLogin('microsoft')}
-                    className="border-2 border-slate-100 hover:bg-slate-50 bg-white px-4 py-3 rounded-2xl transition-all active:scale-[0.98] flex items-center gap-2 text-left cursor-pointer"
-                  >
-                    <svg className="w-4 h-4 text-slate-900 fill-current shrink-0" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M15.97 4.17c.66-.81 1.11-1.93.99-3.06-1 .04-2.21.67-2.93 1.49-.62.69-1.16 1.84-1.01 2.96 1.12.09 2.27-.56 2.95-1.39z"/></svg>
-                    <div>
-                      <span className="text-slate-400 text-[9px] font-bold block leading-none">Microsoft</span>
-                      <span className="text-slate-800 text-[10px] font-black block mt-0.5">Acesso Rápido</span>
-                    </div>
-                  </button>
-                </div>
-              </>
-            )}
-          </div>
+                <button 
+                  className="w-full bg-[#0073e0] text-[#fefcff] font-semibold text-xs sm:text-sm py-3 sm:py-3.5 rounded-lg hover:shadow-lg hover:shadow-[#005bb3]/20 active:scale-[0.98] transition-all duration-200 cursor-pointer border-none" 
+                  type="submit"
+                >
+                  Entrar na Plataforma
+                </button>
+              </form>
 
-          {/* Bottom links and sign up */}
-          <div className="max-w-[370px] text-[10px] text-slate-400 font-medium leading-normal text-left">
-            <span>© 2026 Abba Digital. Todos os direitos reservados. </span>
-            <button 
-              type="button"
-              onClick={onGoToSignup}
-              className="text-[#005bb3] font-bold hover:underline cursor-pointer border-none bg-transparent"
-            >
-              Criar Conta de Professor
-            </button>
-          </div>
+              {/* Social Login Divider (Only online) */}
+              {isOnline && (
+                <>
+                  <div className="flex items-center my-6">
+                    <div className="flex-grow border-t border-[#c1c6d6]"></div>
+                    <span className="px-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                      Ou entrar com
+                    </span>
+                    <div className="flex-grow border-t border-[#c1c6d6]"></div>
+                  </div>
+
+                  {/* Social Buttons */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <button 
+                      onClick={() => handleSocialLogin('google')}
+                      className="flex items-center justify-center gap-2 py-3 px-3 border border-[#c1c6d6] rounded-lg bg-[#faf8ff] hover:bg-[#eaedff] transition-colors active:scale-[0.98] cursor-pointer"
+                    >
+                      <img alt="Google" className="w-5 h-5 object-contain" src="src/assets/icons/Google logo.svg" />
+                      <span className="font-semibold text-xs sm:text-sm text-[#131b2e]">Google</span>
+                    </button>
+                    <button 
+                      onClick={() => handleSocialLogin('microsoft')}
+                      className="flex items-center justify-center gap-2 py-3 px-3 border border-[#c1c6d6] rounded-lg bg-[#faf8ff] hover:bg-[#eaedff] transition-colors active:scale-[0.98] cursor-pointer"
+                    >
+                      <img alt="Microsoft" className="w-5 h-5 object-contain" src="src/assets/icons/Microsoft_logo.svg" />
+                      <span className="font-semibold text-xs sm:text-sm text-[#131b2e]">Microsoft</span>
+                    </button>
+                  </div>
+                </>
+              )}
+            </>
+          )}
+
         </div>
 
-        {/* Right half (Mountain display, hidden on mobile) */}
-        <div className="w-1/2 h-full p-4 relative hidden md:block select-none">
-          <div className="w-full h-full rounded-tl-[24px] rounded-br-[80px] rounded-bl-none rounded-tr-none overflow-hidden relative shadow-inner">
-            <img 
-              src="https://res.cloudinary.com/dudmozd8z/image/upload/q_auto/f_auto/v1778857528/montain_uqtkyt.avif" 
-              alt="Mountain View Internal" 
-              className="w-full h-full object-cover scale-105 brightness-[0.72] object-center" 
-            />
-            
-            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/20"></div>
+      </main>
 
-            <div className="absolute top-6 right-6 bg-white/90 backdrop-blur-md text-slate-900 font-bold text-xs px-4 py-2.5 rounded-full shadow-md flex items-center gap-1.5 cursor-pointer">
-              Abba digital
-              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="7" x2="17" y1="17" y2="7"></line><polyline points="7 7 17 7 17 17"></polyline></svg>
-            </div>
-
-            <div className="absolute bottom-8 inset-x-6 flex flex-col gap-4 text-left">
-              <div className="text-white">
-                <span className="text-xs font-bold text-slate-300 block">Descobrindo o melhor!</span>
-                <h4 className="text-lg font-black tracking-tight leading-snug mt-1.5 max-w-[340px]">
-                  "Ábaco brasileiro interativo para alfabetização bilíngue de suas turmas."
-                </h4>
-              </div>
-
-              <div className="flex items-center gap-2.5 text-[11px] font-bold text-white select-none">
-                <div className="border border-white/35 backdrop-blur-md bg-white/5 rounded-full px-4 py-2.5 flex items-center gap-1.5 shadow-sm">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
-                  100% Interativo
-                </div>
-                <div className="border border-white/35 backdrop-blur-md bg-white/5 rounded-full px-4 py-2.5 flex items-center gap-1.5 shadow-sm">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"></rect><line x1="16" x2="16" y1="2" y2="6"></line><line x1="8" x2="8" y1="2" y2="6"></line><line x1="3" x2="21" y1="10" y2="10"></line></svg>
-                  Acesso Offline
-                </div>
-              </div>
-
-              <div className="flex items-center gap-1.5 mt-2">
-                <div className="h-[3px] bg-white rounded-full w-12 transition-all"></div>
-                <div className="h-[3px] bg-white/30 rounded-full w-8 transition-all"></div>
-                <div className="h-[3px] bg-white/30 rounded-full w-8 transition-all"></div>
-              </div>
-            </div>
-
-          </div>
+      {/* FOOTER COMPONENT */}
+      <footer className="flex flex-col md:flex-row justify-between items-center py-4 px-6 sm:px-10 w-full bg-[#f2f3ff] border-t border-[#c1c6d6]/20 text-xs sm:text-sm">
+        <div className="flex flex-col md:flex-row items-center gap-4">
+          <span className="font-bold text-[#131b2e]">ABBA DIGITAL</span>
+          <span className="text-[#414754]">© 2026 Abba digital. Todos os direitos reservados.</span>
         </div>
+        <div className="flex gap-6 mt-4 md:mt-0">
+          <a className="text-[#414754] hover:text-[#005bb3] transition-all duration-200" href="#">Política de privacidade</a>
+          <a className="text-[#414754] hover:text-[#005bb3] transition-all duration-200" href="#">Termos de uso</a>
+          <a className="text-[#414754] hover:text-[#005bb3] transition-all duration-200" href="#">Contato</a>
+        </div>
+      </footer>
 
-      </div>
     </div>
   );
 };
-
 
 interface SignupScreenProps {
   onSignupSuccess: () => void;

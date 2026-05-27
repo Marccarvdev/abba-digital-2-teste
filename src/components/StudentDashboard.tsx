@@ -4,7 +4,7 @@ import { User, TaskItem, SavedWord } from '../types';
 import abbaLogo from '../assets/logo abba.svg';
 import { cardImageBase64 } from '../base64Data/cardBase64';
 import Loader from './Loader';
-import { supabase, logComponentAction } from '../supabaseClient';
+import { supabase } from '../supabaseClient';
 
 const parseTeacherNoteAndFiles = (rawNote: string) => {
   if (!rawNote) return { note: '', files: [] };
@@ -82,6 +82,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
   const [filterLanguage, setFilterLanguage] = useState<'all' | 'pt' | 'en' | 'de'>('all');
   const [showShareModal, setShowShareModal] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
   const [showSpellingLoader, setShowSpellingLoader] = useState(false);
   const [showWhatsappModal, setShowWhatsappModal] = useState(false);
@@ -99,57 +100,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
   });
   const [taskFilter, setTaskFilter] = useState<'all' | 'pending' | 'in-progress' | 'completed'>('all');
   const [generalSearchQuery, setGeneralSearchQuery] = useState('');
-  const [taskFiles, setTaskFiles] = useState<{ name: string; size: string; url?: string }[]>([]);
-  const [isUploading, setIsUploading] = useState(false);
-
-  const uploadAndAttachFile = async (file: File) => {
-    const allowedExtensions = ['.pdf', '.png', '.jpg', '.jpeg', '.webp', '.gif', '.avif'];
-    const fileNameLower = file.name.toLowerCase();
-    const isAllowed = allowedExtensions.some(ext => fileNameLower.endsWith(ext));
-
-    if (!isAllowed) {
-      alert(`Formato de arquivo não suportado! Formatos aceitos: PDF e Imagens (${allowedExtensions.join(', ')})`);
-      return;
-    }
-
-    const maxSize = 5 * 1024 * 1024; // 5MB
-    if (file.size > maxSize) {
-      alert('O tamanho do arquivo excede o limite máximo de 5MB!');
-      return;
-    }
-
-    const sizeMB = (file.size / (1024 * 1024)).toFixed(1);
-    const sizeLabel = `${sizeMB} MB`;
-
-    setIsUploading(true);
-    try {
-      const fileExt = file.name.split('.').pop();
-      const randomId = Math.random().toString(36).substring(2, 7);
-      const uniqueFileName = `${Date.now()}_${randomId}.${fileExt}`;
-      const filePath = `submissions/${uniqueFileName}`;
-
-      const { data, error } = await supabase.storage
-        .from('task-files')
-        .upload(filePath, file);
-
-      if (error) throw error;
-
-      const { data: { publicUrl } } = supabase.storage
-        .from('task-files')
-        .getPublicUrl(filePath);
-
-      setTaskFiles(prev => [...prev, { name: file.name, size: sizeLabel, url: publicUrl }]);
-      logComponentAction(user.name, user.email || '', 'FILE_UPLOADED', { fileName: file.name, fileSize: sizeLabel, url: publicUrl });
-      alert(`Arquivo "${file.name}" enviado com sucesso!`);
-    } catch (err: any) {
-      console.error('Erro ao fazer upload do arquivo:', err);
-      setTaskFiles(prev => [...prev, { name: file.name, size: sizeLabel }]);
-      alert(`Aviso: O arquivo "${file.name}" foi anexado localmente, mas não pôde ser enviado para o Supabase. Certifique-se de que o bucket 'task-files' existe no seu Supabase Storage.`);
-    } finally {
-      setIsUploading(false);
-    }
-  };
-
+  const [taskFiles, setTaskFiles] = useState<{ name: string; size: string }[]>([]);
   const [dragActive, setDragActive] = useState(false);
   const [taskSearchQuery, setTaskSearchQuery] = useState('');
   const [showProfileMenu, setShowProfileMenu] = useState(false);
@@ -435,8 +386,8 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
         isUrl = false;
       }
 
-      if (isUrl) {
-        code = urlObj?.searchParams.get('code');
+      if (isUrl && urlObj) {
+        code = urlObj.searchParams.get('code');
       }
     }
 
@@ -592,7 +543,25 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
-      uploadAndAttachFile(e.target.files[0]);
+      const file = e.target.files[0];
+      const allowedExtensions = ['.pdf', '.png', '.jpg', '.jpeg', '.webp', '.gif', '.avif'];
+      const fileName = file.name.toLowerCase();
+      const isAllowed = allowedExtensions.some(ext => fileName.endsWith(ext));
+
+      if (!isAllowed) {
+        alert(`Formato de arquivo não suportado! Formatos aceitos: PDF e Imagens (${allowedExtensions.join(', ')})`);
+        return;
+      }
+
+      const maxSize = 5 * 1024 * 1024; // 5MB
+      if (file.size > maxSize) {
+        alert('O tamanho do arquivo excede o limite máximo de 5MB!');
+        return;
+      }
+
+      const sizeMB = (file.size / (1024 * 1024)).toFixed(1);
+      setTaskFiles(prev => [...prev, { name: file.name, size: `${sizeMB} MB` }]);
+      alert(`Arquivo "${file.name}" anexado com sucesso!`);
     }
   };
 
@@ -683,15 +652,9 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
           student_email: newSentItem.studentEmail,
           task_title: newSentItem.taskTitle,
           submitted_at: newSentItem.submittedAt,
-          spelled_words_count: newSentItem.spelledWordsCount,
-          spelled_words: JSON.stringify(completedSpelledWords),
-          task_files: JSON.stringify(taskFiles)
+          spelled_words_count: newSentItem.spelledWordsCount
         }
       ]);
-      logComponentAction(user.name, newSentItem.studentEmail, 'TASK_SUBMITTED', {
-        taskTitle: newSentItem.taskTitle,
-        spelledWordsCount: newSentItem.spelledWordsCount
-      });
       console.log('⚡ Submission synced with Supabase!');
     } catch (err) {
       console.warn('Erro ao salvar submissão no Supabase:', err);
@@ -761,18 +724,37 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
   return (
     <div className="min-h-screen bg-[#faf8ff] text-[#131b2e] flex flex-col font-sans">
       
+      {/* SideNavBar Backdrop for mobile */}
+      {mobileSidebarOpen && (
+        <div 
+          onClick={() => setMobileSidebarOpen(false)}
+          className="fixed inset-0 bg-black/40 z-50 lg:hidden"
+        />
+      )}
+      
       {/* SideNavBar */}
-      <aside className="fixed left-0 top-0 bottom-0 flex flex-col p-md z-40 h-screen w-64 bg-surface-container-low border-r border-outline-variant">
-        <div className="flex items-center gap-sm mb-xl px-sm">
-          <img src={abbaLogo} alt="ABBA DIGITAL Logo" className="w-9 h-9 object-contain shrink-0" />
-          <div>
-            <h1 className="font-headline-md text-headline-md font-black text-on-surface tracking-tight">ABBA DIGITAL</h1>
-            <p className="font-label-sm text-label-sm text-on-surface-variant">Portal da Educação</p>
+      <aside className={`fixed left-0 top-0 bottom-0 flex flex-col p-md z-50 h-screen w-64 bg-surface-container-low border-r border-outline-variant transition-transform duration-300 ${
+        mobileSidebarOpen ? 'translate-x-0' : '-translate-x-full'
+      } lg:translate-x-0`}>
+        <div className="flex items-center gap-sm mb-xl px-sm justify-between">
+          <div className="flex items-center gap-sm">
+            <img src={abbaLogo} alt="ABBA DIGITAL Logo" className="w-9 h-9 object-contain shrink-0" />
+            <div>
+              <h1 className="font-headline-md text-headline-md font-black text-on-surface tracking-tight">ABBA DIGITAL</h1>
+              <p className="font-label-sm text-label-sm text-on-surface-variant">Portal da Educação</p>
+            </div>
           </div>
+          <button 
+            onClick={() => setMobileSidebarOpen(false)}
+            className="lg:hidden p-1 rounded-full hover:bg-surface-container-high border-none bg-transparent cursor-pointer flex items-center justify-center"
+          >
+            <span className="material-symbols-outlined text-slate-500">close</span>
+          </button>
         </div>
         <nav className="flex-grow flex flex-col gap-xs">
           <button
             onClick={() => {
+              setMobileSidebarOpen(false);
               setShowSpellingLoader(true);
               setTimeout(() => {
                 setShowSpellingLoader(false);
@@ -787,7 +769,10 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
           </button>
           
           <button
-            onClick={() => setStudentView('tasks-list')}
+            onClick={() => {
+              setMobileSidebarOpen(false);
+              setStudentView('tasks-list');
+            }}
             className={`flex items-center gap-md px-md py-sm rounded-lg transition-all font-label-md text-label-md text-left cursor-pointer border-none bg-primary-container text-on-primary-container font-bold shadow-sm`}
           >
             <span className="material-symbols-outlined">assignment</span> Tarefas
@@ -811,11 +796,18 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
       </aside>
 
       {/* Main Content Shell */}
-      <div className="ml-64 flex flex-col min-h-screen">
+      <div className="lg:ml-64 flex flex-col min-h-screen w-full overflow-x-hidden">
         {/* TopAppBar */}
         <header className="flex items-center justify-between px-margin-desktop w-full sticky top-0 z-50 bg-surface/80 backdrop-blur-md h-16 border-b border-outline-variant">
           <div className="flex items-center gap-md flex-1">
-            <h2 className="font-title-md text-title-md text-slate-800 font-extrabold md:block hidden">Área do Aluno</h2>
+            <button 
+              onClick={() => setMobileSidebarOpen(true)}
+              className="lg:hidden p-2 rounded-xl hover:bg-slate-100 border-none bg-transparent cursor-pointer flex items-center justify-center mr-2"
+              aria-label="Open sidebar"
+            >
+              <span className="material-symbols-outlined text-slate-800">menu</span>
+            </button>
+            <h2 className="font-title-md text-title-md text-slate-800 font-extrabold">Área do Aluno</h2>
           </div>
           
           <div className="flex items-center gap-md relative">
@@ -1156,7 +1148,24 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
                       e.preventDefault();
                       setDragActive(false);
                       if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-                        uploadAndAttachFile(e.dataTransfer.files[0]);
+                        const file = e.dataTransfer.files[0];
+                        const allowedExtensions = ['.pdf', '.png', '.jpg', '.jpeg', '.webp', '.gif', '.avif'];
+                        const fileName = file.name.toLowerCase();
+                        const isAllowed = allowedExtensions.some(ext => fileName.endsWith(ext));
+
+                        if (!isAllowed) {
+                          alert(`Formato de arquivo não suportado! Formatos aceitos: PDF e Imagens (${allowedExtensions.join(', ')})`);
+                          return;
+                        }
+
+                        const maxSize = 5 * 1024 * 1024; // 5MB
+                        if (file.size > maxSize) {
+                          alert('O tamanho do arquivo excede o limite máximo de 5MB!');
+                          return;
+                        }
+
+                        const sizeMB = (file.size / (1024 * 1024)).toFixed(1);
+                        setTaskFiles(prev => [...prev, { name: file.name, size: `${sizeMB} MB` }]);
                       }
                     }}
                     className={`border-2 border-dashed rounded-xl p-6 flex flex-col items-center justify-center gap-3 transition-all cursor-pointer ${
@@ -1164,7 +1173,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
                         ? 'border-primary bg-primary/5'
                         : 'border-slate-200 hover:border-primary/40 hover:bg-slate-50'
                     }`}
-                    onClick={() => { if (!isUploading) fileInputRef.current?.click(); }}
+                    onClick={() => fileInputRef.current?.click()}
                   >
                     <input
                       ref={fileInputRef}
@@ -1172,26 +1181,15 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
                       className="hidden"
                       onChange={handleFileChange}
                       accept=".pdf,.png,.jpg,.jpeg,.webp,.gif,.avif"
-                      disabled={isUploading}
                     />
-                    {isUploading ? (
-                      <div className="flex flex-col items-center justify-center gap-2 py-4">
-                        <span className="material-symbols-outlined text-primary text-[28px] animate-spin">sync</span>
-                        <p className="text-sm font-semibold text-slate-700">Enviando arquivo...</p>
-                        <p className="text-xs text-slate-400">Por favor, aguarde.</p>
-                      </div>
-                    ) : (
-                      <>
-                        <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
-                          <span className="material-symbols-outlined text-primary text-[24px]">upload_file</span>
-                        </div>
-                        <div className="text-center">
-                          <p className="text-sm font-semibold text-slate-700">Arraste um arquivo aqui</p>
-                          <p className="text-xs text-slate-400 mt-1">ou <span className="text-primary font-semibold">clique para selecionar</span></p>
-                        </div>
-                        <p className="text-[10px] text-slate-400">PDF ou Imagens — máx. 5 MB</p>
-                      </>
-                    )}
+                    <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+                      <span className="material-symbols-outlined text-primary text-[24px]">upload_file</span>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-sm font-semibold text-slate-700">Arraste um arquivo aqui</p>
+                      <p className="text-xs text-slate-400 mt-1">ou <span className="text-primary font-semibold">clique para selecionar</span></p>
+                    </div>
+                    <p className="text-[10px] text-slate-400">PDF ou Imagens — máx. 5 MB</p>
                   </div>
 
                   {/* Smart Teacher Link Input */}
@@ -1827,11 +1825,29 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
                         e.preventDefault();
                         setDragActive(false);
                         if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-                          uploadAndAttachFile(e.dataTransfer.files[0]);
+                          const file = e.dataTransfer.files[0];
+                          const allowedExtensions = ['.pdf', '.png', '.jpg', '.jpeg', '.webp', '.gif', '.avif'];
+                          const fileName = file.name.toLowerCase();
+                          const isAllowed = allowedExtensions.some(ext => fileName.endsWith(ext));
+
+                          if (!isAllowed) {
+                            alert(`Formato de arquivo não suportado! Formatos aceitos: PDF e Imagens (${allowedExtensions.join(', ')})`);
+                            return;
+                          }
+
+                          const maxSize = 5 * 1024 * 1024; // 5MB
+                          if (file.size > maxSize) {
+                            alert('O tamanho do arquivo excede o limite máximo de 5MB!');
+                            return;
+                          }
+
+                          const sizeMB = (file.size / (1024 * 1024)).toFixed(1);
+                          setTaskFiles([...taskFiles, { name: file.name, size: `${sizeMB} MB` }]);
+                          alert(`Arquivo "${file.name}" anexado com sucesso!`);
                         }
                       }}
                       onClick={() => {
-                        if (!isUploading && fileInputRef.current) {
+                        if (fileInputRef.current) {
                           fileInputRef.current.click();
                         }
                       }}
@@ -1839,22 +1855,12 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
                         dragActive ? 'border-primary bg-surface-container-high' : 'border-outline-variant'
                       }`}
                     >
-                      {isUploading ? (
-                        <div className="flex flex-col items-center justify-center gap-2 py-4">
-                          <span className="material-symbols-outlined text-primary text-[32px] animate-spin">sync</span>
-                          <p className="font-headline-md text-headline-md text-on-surface mb-xs">Enviando arquivo...</p>
-                          <p className="font-body-md text-body-md text-on-surface-variant">Por favor, aguarde.</p>
-                        </div>
-                      ) : (
-                        <>
-                          <div className="w-14 h-14 bg-surface-container-highest rounded-full flex items-center justify-center text-primary mb-md group-hover:scale-110 transition-transform">
-                            <span className="material-symbols-outlined text-[32px]">cloud_upload</span>
-                          </div>
-                          <p className="font-headline-md text-headline-md text-on-surface mb-xs">Upload de Arquivos</p>
-                          <p className="font-body-md text-body-md text-on-surface-variant">Arraste seus arquivos ou clique para selecionar</p>
-                          <p className="font-label-sm text-label-sm text-on-secondary-container mt-md">Tamanho máximo: 5MB</p>
-                        </>
-                      )}
+                      <div className="w-14 h-14 bg-surface-container-highest rounded-full flex items-center justify-center text-primary mb-md group-hover:scale-110 transition-transform">
+                        <span className="material-symbols-outlined text-[32px]">cloud_upload</span>
+                      </div>
+                      <p className="font-headline-md text-headline-md text-on-surface mb-xs">Upload de Arquivos</p>
+                      <p className="font-body-md text-body-md text-on-surface-variant">Arraste seus arquivos ou clique para selecionar</p>
+                      <p className="font-label-sm text-label-sm text-on-secondary-container mt-md">Tamanho máximo: 5MB</p>
                     </div>
 
                     {/* Placeholder for uploaded files */}
@@ -1888,13 +1894,13 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
                           }
                           setShowShareModal(true);
                         }}
-                        disabled={taskFiles.length === 0 || isUploading}
+                        disabled={taskFiles.length === 0}
                         className={`w-full mt-lg flex items-center justify-center gap-sm py-md px-lg rounded-lg font-bold font-label-md transition-all shadow-sm border-none ${
-                          (taskFiles.length === 0 || isUploading)
+                          taskFiles.length === 0
                             ? 'bg-slate-200 text-slate-400 cursor-not-allowed opacity-70'
                             : 'bg-primary text-on-primary hover:opacity-90 active:scale-95 duration-150 cursor-pointer'
                         }`}
-                        title={isUploading ? 'Aguarde o upload do arquivo terminar.' : taskFiles.length === 0 ? 'Por favor, anexe a tarefa clicando na área de upload acima antes de enviar.' : 'Enviar tarefa'}
+                        title={taskFiles.length === 0 ? 'Por favor, anexe a tarefa clicando na área de upload acima antes de enviar.' : 'Enviar tarefa'}
                       >
                         <span className="material-symbols-outlined">send</span>
                         <span className="">Enviar Tarefa</span>

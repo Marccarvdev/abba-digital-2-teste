@@ -116,10 +116,8 @@ import Loader from './components/Loader';
 import styled from 'styled-components';
 import { LoginScreen, SignupScreen } from './components/AuthScreens';
 import { TeacherDashboard } from './components/TeacherDashboard';
-import { TeacherDashboardPremium } from './components/TeacherDashboardPremium';
 import { StudentDashboard } from './components/StudentDashboard';
 import { Confetti } from './components/Confetti';
-
 
 const getShelfCubeIdForLetter = (letter: string): string => {
   const match = ALPHABET_CUBES.find(c => c.primaryLetter === letter || c.secondaryLetter === letter);
@@ -127,7 +125,7 @@ const getShelfCubeIdForLetter = (letter: string): string => {
 };
 
 interface StyledHamburgerProps {
-  $isOpen: boolean;
+  isOpen: boolean;
 }
 
 const StyledHamburger = styled.div<StyledHamburgerProps>`
@@ -148,25 +146,25 @@ const StyledHamburger = styled.div<StyledHamburgerProps>`
   }
 
   .bar--top {
-    bottom: ${props => props.$isOpen ? 'calc(50% - 3px / 2)' : 'calc(50% + 6px + 3px / 2)'};
-    transform: ${props => props.$isOpen ? 'rotate(135deg)' : 'none'};
+    bottom: ${props => props.isOpen ? 'calc(50% - 3px / 2)' : 'calc(50% + 6px + 3px / 2)'};
+    transform: ${props => props.isOpen ? 'rotate(135deg)' : 'none'};
     transition-property: bottom, transform;
-    transition-delay: ${props => props.$isOpen ? '0s, 0.35s' : '0.35s, 0s'};
+    transition-delay: ${props => props.isOpen ? '0s, 0.35s' : '0.35s, 0s'};
   }
 
   .bar--middle {
     top: calc(50% - 3px / 2);
-    opacity: ${props => props.$isOpen ? 0 : 1};
+    opacity: ${props => props.isOpen ? 0 : 1};
     transition-property: opacity;
-    transition-duration: ${props => props.$isOpen ? '0s' : '0.35s'};
+    transition-duration: ${props => props.isOpen ? '0s' : '0.35s'};
     transition-delay: 0.35s;
   }
 
   .bar--bottom {
-    top: ${props => props.$isOpen ? 'calc(50% - 3px / 2)' : 'calc(50% + 6px + 3px / 2)'};
-    transform: ${props => props.$isOpen ? 'rotate(225deg)' : 'none'};
+    top: ${props => props.isOpen ? 'calc(50% - 3px / 2)' : 'calc(50% + 6px + 3px / 2)'};
+    transform: ${props => props.isOpen ? 'rotate(225deg)' : 'none'};
     transition-property: top, transform;
-    transition-delay: ${props => props.$isOpen ? '0s, 0.35s' : '0.35s, 0s'};
+    transition-delay: ${props => props.isOpen ? '0s, 0.35s' : '0.35s, 0s'};
   }
 `;
 
@@ -195,14 +193,19 @@ export default function App() {
     return null;
   });
 
-  const [currentScreen, setCurrentScreen] = useState<'login' | 'signup' | 'student-dashboard' | 'teacher-dashboard' | 'teacher-dashboard-premium' | 'abacus'>(() => {
+  const [currentScreen, setCurrentScreen] = useState<'login' | 'signup' | 'student-dashboard' | 'teacher-dashboard' | 'abacus'>(() => {
+    // 1. Check URL hash first
+    const hash = window.location.hash.replace('#/', '').replace('#', '');
+    if (hash === 'login') return 'login';
+    if (hash === 'professor') return 'teacher-dashboard';
+    if (hash === 'aluno') return 'student-dashboard';
+    
+    // 2. Check query params
     const params = new URLSearchParams(window.location.search);
-    if (params.get('view') === 'premium') {
-      return 'teacher-dashboard-premium';
-    }
     if (params.has('import')) {
       return 'teacher-dashboard';
     }
+    // 3. Check saved session
     const saved = localStorage.getItem('abba_logged_in_user');
     if (saved) {
       try {
@@ -242,6 +245,39 @@ export default function App() {
     cutWiresRows: Record<number, boolean>;
   } | null>(null);
 
+  // Sync URL hash with current screen
+  useEffect(() => {
+    const screenToHash: Record<string, string> = {
+      'login': 'login',
+      'signup': 'login',
+      'teacher-dashboard': 'professor',
+      'student-dashboard': 'aluno',
+      'abacus': '',
+    };
+    const newHash = screenToHash[currentScreen] || '';
+    const currentHash = window.location.hash.replace('#/', '').replace('#', '');
+    if (newHash !== currentHash) {
+      if (newHash) {
+        window.history.replaceState(null, '', `#/${newHash}`);
+      } else {
+        window.history.replaceState(null, '', window.location.pathname + window.location.search);
+      }
+    }
+  }, [currentScreen]);
+
+  // Listen for browser back/forward hash changes
+  useEffect(() => {
+    const handleHashChange = () => {
+      const hash = window.location.hash.replace('#/', '').replace('#', '');
+      if (hash === 'login') setCurrentScreen('login');
+      else if (hash === 'professor') setCurrentScreen('teacher-dashboard');
+      else if (hash === 'aluno') setCurrentScreen('student-dashboard');
+      else setCurrentScreen('abacus');
+    };
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, []);
+
   useEffect(() => {
     localStorage.setItem('abba_completed_spelled_words', JSON.stringify(completedSpelledWords));
   }, [completedSpelledWords]);
@@ -261,9 +297,47 @@ export default function App() {
     return () => clearInterval(interval);
   }, [user]);
 
-  // Process import link query parameter on mount
+  // Process import link query parameter or auto fixed code login on mount
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
+    
+    // 1. Fixed codes auto login
+    const code = params.get('code');
+    if (code) {
+      const upperCode = code.trim().toUpperCase();
+      if (upperCode === 'PROF123') {
+        const teacherUser: User = {
+          name: 'Professor Décio Silva',
+          email: 'teacher@abba.com',
+          role: 'teacher'
+        };
+        setUser(teacherUser);
+        localStorage.setItem('abba_logged_in_user', JSON.stringify(teacherUser));
+        setCurrentScreen('teacher-dashboard');
+        setShowLanding(false);
+        window.history.replaceState({}, document.title, window.location.pathname);
+        return;
+      } else if (upperCode === 'ALUNO123') {
+        const studentUser: User = {
+          name: 'Aluno Fixo',
+          email: 'alunofixo@gmail.com',
+          role: 'student',
+          codeSession: {
+            code: 'ALUNO123',
+            expiresAt: Date.now() + 365 * 24 * 60 * 60 * 1000,
+            codeId: 'student-fixed-id'
+          }
+        };
+        setUser(studentUser);
+        localStorage.setItem('abba_logged_in_user', JSON.stringify(studentUser));
+        setCurrentScreen('student-dashboard');
+        setShowLanding(false);
+        window.history.replaceState({}, document.title, window.location.pathname);
+        return;
+      }
+    }
+
+    // 2. Import Magic link
     const importParam = params.get('import');
     if (importParam) {
       try {
@@ -367,7 +441,6 @@ export default function App() {
     
     setCurrentScreen('abacus');
   };
-
 
   // Ref for scrolling to the enter button on landing page
   const enterButtonRef = useRef<HTMLDivElement>(null);
@@ -504,10 +577,7 @@ export default function App() {
   const previousLengthsRef = useRef<number[]>([]);
 
   // Splash/Landing screen state managers (blank screen first -> smooth fade-in logo -> rest of content)
-  const [showLanding, setShowLanding] = useState<boolean>(() => {
-    const saved = localStorage.getItem('abba_logged_in_user');
-    return !saved;
-  });
+  const [showLanding, setShowLanding] = useState<boolean>(true);
   const [landingPhase, setLandingPhase] = useState<'blank' | 'logo' | 'text'>('blank');
 
   useEffect(() => {
@@ -949,19 +1019,6 @@ export default function App() {
   // Continuous smooth hardware-accelerated auto-scrolling loop during active drag-and-drop
   useEffect(() => {
     const isDragging = draggedCube !== null || draggedTrayIndex !== null || draggedShelfIndex !== null;
-    
-    if (isDragging) {
-      document.documentElement.classList.add('dragging-active');
-      if (boardRef.current) {
-        boardRef.current.classList.add('dragging-active');
-      }
-    } else {
-      document.documentElement.classList.remove('dragging-active');
-      if (boardRef.current) {
-        boardRef.current.classList.remove('dragging-active');
-      }
-    }
-
     if (!isDragging) return;
 
     let animFrameId: number;
@@ -981,21 +1038,15 @@ export default function App() {
         if (eX >= boardRect.left - 35 && eX <= boardRect.right + 35) {
           const bottomThreshold = boardRect.bottom - 75;
           const topThreshold = boardRect.top + 75;
-          const vy = dragVelocityRef.current.y; // positive when moving down, negative when moving up
 
-          if (eY > bottomThreshold && eY < boardRect.bottom + 100) {
-            const dist = eY - bottomThreshold;
-            // Quadratic base speed + hand velocity boost
-            const baseSpeed = Math.pow(dist / 9, 2);
-            const velocityBoost = vy > 0 ? vy * 16 : 0;
-            const speed = Math.max(2, baseSpeed + velocityBoost);
-            boardRef.current.scrollBy({ top: speed });
-          } else if (eY < topThreshold && eY > boardRect.top - 100) {
-            const dist = topThreshold - eY;
-            const baseSpeed = Math.pow(dist / 9, 2);
-            const velocityBoost = vy < 0 ? Math.abs(vy) * 16 : 0;
-            const speed = Math.max(2, baseSpeed + velocityBoost);
-            boardRef.current.scrollBy({ top: -speed });
+          if (eY > bottomThreshold && eY < boardRect.bottom + 50) {
+            // Smoothly calculate scroll intensity based on proximity to bottom
+            const intensity = Math.min(16, Math.max(2, (eY - bottomThreshold) / 3));
+            boardRef.current.scrollBy({ top: intensity });
+          } else if (eY < topThreshold && eY > boardRect.top - 50) {
+            // Smoothly calculate scroll intensity based on proximity to top
+            const intensity = Math.min(16, Math.max(2, (topThreshold - eY) / 3));
+            boardRef.current.scrollBy({ top: -intensity });
           }
         }
       }
@@ -1003,21 +1054,12 @@ export default function App() {
       // 2. Scroll the Window page vertically if dragging near viewport edges
       const winHeight = window.innerHeight;
       const winThreshold = 140;
-      const vy = dragVelocityRef.current.y;
-      
       if (eY < winThreshold) {
-        const dist = winThreshold - eY;
-        // Quadratic base speed + hand velocity boost (converted to pixels per frame)
-        const baseSpeed = Math.pow(dist / 14, 2);
-        const velocityBoost = vy < 0 ? Math.abs(vy) * 20 : 0;
-        const speed = Math.max(3, baseSpeed + velocityBoost);
-        window.scrollBy({ top: -speed });
+        const winIntensity = Math.min(20, Math.max(3, (winThreshold - eY) / 2.5));
+        window.scrollBy({ top: -winIntensity });
       } else if (eY > winHeight - winThreshold) {
-        const dist = eY - (winHeight - winThreshold);
-        const baseSpeed = Math.pow(dist / 14, 2);
-        const velocityBoost = vy > 0 ? vy * 20 : 0;
-        const speed = Math.max(3, baseSpeed + velocityBoost);
-        window.scrollBy({ top: speed });
+        const winIntensity = Math.min(20, Math.max(3, (eY - (winHeight - winThreshold)) / 2.5));
+        window.scrollBy({ top: winIntensity });
       }
 
       animFrameId = requestAnimationFrame(tick);
@@ -1026,10 +1068,6 @@ export default function App() {
     animFrameId = requestAnimationFrame(tick);
     return () => {
       cancelAnimationFrame(animFrameId);
-      document.documentElement.classList.remove('dragging-active');
-      if (boardRef.current) {
-        boardRef.current.classList.remove('dragging-active');
-      }
     };
   }, [draggedCube, draggedTrayIndex, draggedShelfIndex]);
 
@@ -1287,26 +1325,6 @@ export default function App() {
     };
 
     const handlePointerMove = (e: PointerEvent) => {
-      // Calculate delta y before dragLastMouse is updated
-      const dy = dragLastMouseRef.current.x !== 0 || dragLastMouseRef.current.y !== 0
-        ? e.clientY - dragLastMouseRef.current.y
-        : 0;
-
-      // Scroll active scroll container or window 1:1 with hand movement during drag!
-      const isDragging = draggedCubeRef.current !== null || draggedTrayIndexRef.current !== null || draggedShelfIndexRef.current !== null;
-      if (isDragging && dy !== 0) {
-        if (boardRef.current) {
-          const boardRect = boardRef.current.getBoundingClientRect();
-          if (e.clientX >= boardRect.left && e.clientX <= boardRect.right && e.clientY >= boardRect.top && e.clientY <= boardRect.bottom) {
-            boardRef.current.scrollBy({ top: dy });
-          } else {
-            window.scrollBy({ top: dy });
-          }
-        } else {
-          window.scrollBy({ top: dy });
-        }
-      }
-
       // Map pointer coordinates directly and milimetrically to eliminate drag latency,
       // ensuring the dragging cube coordinates align instantly with the finger.
       setPointerPos({ x: e.clientX, y: e.clientY });
@@ -2128,6 +2146,8 @@ export default function App() {
     }
   };
 
+  const hasAnyBlocks = spelledRows.some(row => row.length > 0);
+
   // Session Expired Modal
   const renderSessionExpiredModal = () => (
     <AnimatePresence>
@@ -2189,27 +2209,6 @@ export default function App() {
         onLogout={() => {
           setUser(null);
           localStorage.removeItem('abba_logged_in_user');
-          setCurrentScreen('abacus');
-          setShowLanding(true);
-        }}
-        onLaunchReviewMode={handleLaunchReviewMode}
-      />
-    );
-  }
-
-  if (currentScreen === 'teacher-dashboard-premium') {
-    const activeUser = user || {
-      name: 'Professor Décio Silva',
-      email: 'teacher@abba.com',
-      role: 'teacher'
-    };
-    return (
-      <TeacherDashboardPremium
-        user={activeUser}
-        onLogout={() => {
-          setUser(null);
-          localStorage.removeItem('abba_logged_in_user');
-          window.history.replaceState({}, document.title, window.location.pathname);
           setCurrentScreen('abacus');
           setShowLanding(true);
         }}
@@ -2489,107 +2488,6 @@ export default function App() {
         )}
       </AnimatePresence>
 
-      {showConfetti && <Confetti />}
-
-      {/* Floating Task Guide Bar for Aluno */}
-      {activeSpellingTarget && (
-        <div className="bg-[#eaedff] border-b border-[#005bb3] py-3.5 px-6 flex justify-between items-center text-xs font-bold z-[45] shadow-sm shrink-0 sticky top-0">
-          <div className="flex flex-wrap items-center gap-4">
-            <span className="px-3 py-1.5 rounded bg-[#005bb3] text-white font-extrabold uppercase">
-              Soletrar: {activeSpellingTarget.word}
-            </span>
-            <div className="flex items-center gap-2">
-              <span className="text-slate-500 font-medium">Idioma:</span>
-              <span className="capitalize text-[#005bb3] font-bold">
-                {activeSpellingTarget.language === 'pt' ? 'Português' : activeSpellingTarget.language === 'en' ? 'Inglês' : 'Alemão'}
-              </span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-slate-500 font-medium">Fio Recomendado:</span>
-              <div className="w-4 h-4 rounded-full border border-slate-200" style={{ backgroundColor: activeSpellingTarget.color }} />
-            </div>
-          </div>
-          
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => {
-                const target = activeSpellingTarget.word;
-                const targetColor = activeSpellingTarget.color;
-                let isSpelledCorrectly = false;
-                let matchedRowIdx = -1;
-                
-                spelledRows.forEach((row, idx) => {
-                  const wordstr = row.map(l => l.letter).join("").trim();
-                  if (wordstr === target) {
-                    isSpelledCorrectly = true;
-                    matchedRowIdx = idx;
-                  }
-                });
-                
-                if (isSpelledCorrectly) {
-                  setShowConfetti(true);
-                  
-                  const matchedRow = spelledRows[matchedRowIdx];
-                  const newWord: SavedWord = {
-                    word: target,
-                    letters: matchedRow,
-                    themeColor: targetColor
-                  };
-                  
-                  setCompletedSpelledWords(prev => {
-                    if (prev.some(w => w.word === target)) return prev;
-                    return [...prev, newWord];
-                  });
-                  
-                  alert(`Parabéns! Você soletrou "${target}" com sucesso! 🎉`);
-                  setTimeout(() => {
-                    setShowConfetti(false);
-                  }, 4500);
-                  setActiveSpellingTarget(null);
-                  setCurrentScreen('student-dashboard');
-                } else {
-                  alert(`Quase lá! Lembre-se de soletrar a palavra "${target}" exatamente em uma das linhas.`);
-                }
-              }}
-              className="px-4 py-2 bg-[#00aa6c] hover:bg-[#00925c] text-white rounded-xl shadow transition-all cursor-pointer active:scale-95 flex items-center gap-1.5"
-            >
-              <span className="material-symbols-outlined text-[16px]">check_circle</span>
-              Validar e Concluir
-            </button>
-            <button
-              onClick={() => {
-                setActiveSpellingTarget(null);
-                setCurrentScreen('student-dashboard');
-              }}
-              className="px-4 py-2 border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 rounded-xl cursor-pointer"
-            >
-              Voltar para Atividades
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Floating Review Bar for Professor */}
-      {activeReviewSubmission && (
-        <div className="bg-[#faf8ff] border-b border-[#005bb3] py-4 px-6 flex justify-between items-center text-xs font-bold z-[45] shadow-sm shrink-0 sticky top-0">
-          <div className="flex items-center gap-3">
-            <span className="material-symbols-outlined text-purple-600">rate_review</span>
-            <div>
-              <p className="text-sm font-black text-slate-800">Modo de Revisão de Atividades</p>
-              <p className="text-[10px] text-slate-400 font-semibold mt-0.5">Aluno: {activeReviewSubmission.studentName} • Tarefa: {activeReviewSubmission.taskTitle}</p>
-            </div>
-          </div>
-          
-          <button
-            onClick={handleCloseReviewMode}
-            className="px-5 py-2.5 bg-[#005bb3] hover:bg-[#00468c] text-white rounded-xl shadow cursor-pointer transition-all active:scale-95 flex items-center gap-1.5"
-          >
-            <span className="material-symbols-outlined text-[16px]">arrow_back</span>
-            Voltar para o Painel do Professor
-          </button>
-        </div>
-      )}
-
       {/* HEADER SECTION */}
       <header className="sticky top-0 bg-white/95 backdrop-blur-md border-b border-gray-100 py-3.5 px-4 sm:px-6 md:px-8 z-40 shadow-xs">
         <div className="max-w-7xl mx-auto flex items-center justify-between gap-3">
@@ -2601,7 +2499,7 @@ export default function App() {
               className="p-2 rounded-xl hover:bg-slate-100 active:scale-95 transition-all flex items-center justify-center cursor-pointer relative"
               aria-label="Toggle menu"
             >
-              <StyledHamburger $isOpen={isMenuOpen}>
+              <StyledHamburger isOpen={isMenuOpen}>
                 <div className="bar bar--top" />
                 <div className="bar bar--middle" />
                 <div className="bar bar--bottom" />
@@ -2646,13 +2544,24 @@ export default function App() {
                   <h3 className="font-display font-black text-2xl sm:text-3xl text-gray-950 group-hover:text-[#005ba4] transition-colors tracking-tight leading-tight">
                     Saiba mais
                   </h3>
-                  <p className="text-xs sm:text-sm text-gray-500 mt-2 font-medium leading-relaxed font-sans max-w-md font-semibold font-sans">
+                  <p className="text-xs sm:text-sm text-gray-500 mt-2 font-medium leading-relaxed font-sans max-w-md font-semibold">
                     Clique aqui para acessar a matéria completa sobre o Ábaco Brasileiro de Alfabetização Bilingue por José Décio de Alencar.
                   </p>
                 </button>
 
+                {/* Profile/Login Section inside Menu */}
                 {user ? (
-                  <div className="border-t border-[#dde0e2] mt-6 pt-6 flex flex-col gap-4">
+                  <div className="border-t border-gray-150 mt-6 pt-6 flex flex-col gap-5">
+                    <div className="flex items-center gap-4 bg-slate-50 p-4 rounded-2xl border border-gray-100 max-w-md">
+                      <div className="w-12 h-12 rounded-full bg-[#005ba4] text-white flex items-center justify-center font-display font-extrabold text-lg shadow-xs shrink-0">
+                        {user.name ? user.name.charAt(0).toUpperCase() : 'U'}
+                      </div>
+                      <div>
+                        <h4 className="font-display font-black text-gray-950 text-base leading-tight">{user.name}</h4>
+                        <p className="text-xs text-gray-500 font-medium font-sans mt-0.5">{user.email}</p>
+                      </div>
+                    </div>
+                    
                     <button
                       onClick={() => {
                         setIsMenuOpen(false);
@@ -2662,10 +2571,11 @@ export default function App() {
                           setCurrentScreen('student-dashboard');
                         }
                       }}
-                      className="text-left font-display font-black text-2xl sm:text-3xl text-[#005bb3] hover:text-[#00468c] transition-colors tracking-tight leading-tight cursor-pointer"
+                      className="text-left font-display font-black text-2xl sm:text-3xl text-[#005ba3] hover:text-[#00468c] transition-colors tracking-tight leading-tight cursor-pointer border-none bg-transparent p-0 focus:outline-none"
                     >
                       Voltar ao Painel Geral
                     </button>
+                    
                     <button
                       onClick={() => {
                         setIsMenuOpen(false);
@@ -2674,21 +2584,21 @@ export default function App() {
                         setCurrentScreen('abacus');
                         setShowLanding(true);
                       }}
-                      className="text-left font-display font-black text-2xl sm:text-3xl text-red-600 hover:text-red-800 transition-colors tracking-tight leading-tight cursor-pointer"
+                      className="text-left font-display font-black text-2xl sm:text-3xl text-red-600 hover:text-red-800 transition-colors tracking-tight leading-tight cursor-pointer border-none bg-transparent p-0 focus:outline-none"
                     >
                       Sair da Conta
                     </button>
                   </div>
                 ) : (
-                  <div className="border-t border-[#dde0e2] mt-6 pt-6 flex flex-col gap-4">
+                  <div className="border-t border-gray-150 mt-6 pt-6 flex flex-col gap-4">
                     <button
                       onClick={() => {
                         setIsMenuOpen(false);
                         setCurrentScreen('login');
                       }}
-                      className="text-left font-display font-black text-2xl sm:text-3xl text-[#005bb3] hover:text-[#00468c] transition-colors tracking-tight leading-tight cursor-pointer"
+                      className="text-left font-display font-black text-2xl sm:text-3xl text-gray-950 hover:text-[#005ba4] transition-colors tracking-tight leading-tight cursor-pointer border-none bg-transparent p-0 focus:outline-none"
                     >
-                      Entrar na Conta
+                      Minha Conta
                     </button>
                   </div>
                 )}
@@ -2702,24 +2612,13 @@ export default function App() {
       <main className="max-w-4xl mx-auto w-full px-4 sm:px-6 md:px-8 mt-6 flex flex-col gap-6">
         
         <div className="text-left">
-          {activeTaskInfo ? (
-            <>
-              <h1 className="font-display font-extrabold text-2xl sm:text-3xl text-gray-950 tracking-tight leading-tight">
-                {activeTaskInfo.title}
-              </h1>
-              <p className="text-sm text-slate-500 mt-1">
-                {activeTaskInfo.summary}
-              </p>
-            </>
-          ) : (
-            <h2 className="font-display font-extrabold text-2xl sm:text-3xl text-gray-950 tracking-tight leading-tight">
-              Inovação Brasileira no ensino de línguas estrangeiras.
-            </h2>
-          )}
+          <h2 className="font-display font-extrabold text-2xl sm:text-3xl text-gray-950 tracking-tight leading-tight">
+            Inovação Brasileira no ensino de línguas estrangeiras.
+          </h2>
         </div>
 
         {/* 1. INTERACTIVE CUBES GRID */}
-        <section className={`bg-white rounded-3xl border border-gray-200 p-5 sm:p-6 shadow-xs w-full text-left ${activeReviewSubmission ? 'pointer-events-none opacity-50 select-none' : ''}`}>
+        <section className="bg-white rounded-3xl border border-gray-200 p-5 sm:p-6 shadow-xs w-full text-left">
           <div className="mb-4 border-b border-gray-100 pb-2.5 flex items-center justify-between">
             <button
               onClick={handleFlagClick}
@@ -2804,7 +2703,7 @@ export default function App() {
         {/* 2. THE MULTI-LINE SPELLING WORKSPACE */}
         <section 
           ref={trayRef} 
-          className={`bg-white rounded-3xl border border-gray-150 p-5 sm:p-6 shadow-xs relative overflow-hidden w-full text-left font-sans animate-feed ${activeReviewSubmission ? 'pointer-events-none' : ''}`}
+          className="bg-white rounded-3xl border border-gray-150 p-5 sm:p-6 shadow-xs relative overflow-hidden w-full text-left font-sans animate-feed"
         >
           <div className="flex flex-col gap-4 w-full">
 
@@ -3724,10 +3623,10 @@ export default function App() {
       <AnimatePresence>
         {((draggedCube && draggedLetter) || (draggedTrayIndex !== null && draggedBoardLetter !== null) || (draggedShelfIndex !== null)) && (
           <div
-            className="pointer-events-none absolute z-50 w-[calc((100vw-6rem)/5)] h-[calc((100vw-6rem)/5)] sm:w-[66px] sm:h-[66px] md:w-[76px] md:h-[76px] -translate-x-1/2 -translate-y-1/2 overflow-visible"
+            className="pointer-events-none fixed z-50 w-[calc((100vw-6rem)/5)] h-[calc((100vw-6rem)/5)] sm:w-[66px] sm:h-[66px] md:w-[76px] md:h-[76px] -translate-x-1/2 -translate-y-1/2 overflow-visible"
             style={{
-              left: pointerPos.x + window.scrollX,
-              top: pointerPos.y + window.scrollY,
+              left: pointerPos.x,
+              top: pointerPos.y,
             }}
           >
             {draggedShelfIndex !== null ? (
