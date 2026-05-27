@@ -19,8 +19,8 @@ export const TeacherDashboardPremium: React.FC<TeacherDashboardPremiumProps> = (
   onLogout, 
   onLaunchReviewMode 
 }) => {
-  // Navigation / Tabs (Inbox = Submissions, AccessKeys = Links, Logs = actions log, Tasks = all tasks)
-  const [activeFolder, setActiveFolder] = useState<'inbox' | 'accessKeys' | 'logs' | 'tasks'>('inbox');
+  // Navigation / Tabs (Inbox = Submissions, AccessKeys = Links, Logs = actions log, Tasks = all tasks, Students = list students)
+  const [activeFolder, setActiveFolder] = useState<'inbox' | 'accessKeys' | 'logs' | 'tasks' | 'students'>('inbox');
   
   // Database States
   const [submissions, setSubmissions] = useState<StudentSubmission[]>([]);
@@ -32,6 +32,7 @@ export const TeacherDashboardPremium: React.FC<TeacherDashboardPremiumProps> = (
 
   // Selection & Details
   const [selectedSubmissionId, setSelectedSubmissionId] = useState<string | null>(null);
+  const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
   
   // Search & Filter
   const [searchQuery, setSearchQuery] = useState('');
@@ -136,29 +137,117 @@ export const TeacherDashboardPremium: React.FC<TeacherDashboardPremiumProps> = (
         setActionLogs(dbLogs);
       }
 
-      // 5. Sincronizar Logins para obter lista de alunos
-      const { data: dbLogins, error: loginsErr } = await supabase
-        .from('student_logins')
-        .select('student_name, student_email')
-        .order('logged_at', { ascending: false });
+      // 5. Sincronizar Alunos da tabela 'students' ou fallback para 'student_logins'
+      try {
+        const { data: dbStudents, error: studentsErr } = await supabase
+          .from('students')
+          .select('*');
 
-      if (dbLogins && !loginsErr) {
-        // Obter alunos únicos
-        const uniqueNames = new Set();
-        const studentList: any[] = [];
-        dbLogins.forEach((login: any) => {
-          if (!uniqueNames.has(login.student_name)) {
-            uniqueNames.add(login.student_name);
-            studentList.push({
-              name: login.student_name,
-              email: login.student_email || 'estudante@abba.com'
-            });
+        if (dbStudents && !studentsErr) {
+          if (dbStudents.length === 0) {
+            // Auto-seed
+            const formattedInitial = [
+              { id: 'st-1', name: "Ana Beatriz Silva", class: "Turma A - 3º Ano", img: "https://lh3.googleusercontent.com/aida-public/AB6AXuA36Ly4xeWawwKgX-g0LtkXrGT5DTjmm-XeB9Qk6DnSHU-NH54f_hVpqhRSjZs2501yox04bFvBm3qcg4yJditWLeZ66sEhf1BM2qzrzTrRAJ1IuAIpRYb1T08Th4stWnf7V5GK2BSYKgk3P5OvbDzMAAbIACMxK2mI8bpZrbH76YSaaBRPkN9xMZfQmhcm1FtZ7ThFMF6DEYGrtqYqtjPuw6W6iljH5xz1skvI1FXm8WrX2SwaVwgX4vD0qOebo0Hq7Z48evtz0z5Z", progress: 85, matricula: '202300142', gender: 'F' },
+              { id: 'st-2', name: "Carlos andré", class: "Turma A - 3º Ano", img: "https://lh3.googleusercontent.com/aida-public/AB6AXuDqkV-9yCRTIEx8yOwalSNgnJoB7RDDIC5cjysNDwq3qLDkFhWPSGMkg_upCUk2izlt4E-kqkdhSEbFbCNkiuxBU8MtAExoSWUkjzw8FlH2wZ4VSNrCVOHHweC7l6JL19tJNL5ff3Uwdt1UJsPMMHs3POE0Ile5WBXcNOYSC72xdbVYwTSuZTAHmCJ3b69Zs-_lW1c2qq-pKfAeqP8CFv0SUDEntbF7bUmmBtE3o97YG2yRkd-Cx5gF0NYXf4nZkSCMIhiOb68pAWOS", progress: 60, matricula: '202300891', gender: 'M' },
+              { id: 'st-3', name: "Gabriela Fontes", class: "Turma B - 3º Ano", img: "https://lh3.googleusercontent.com/aida-public/AB6AXuBpRBuZNFWOpOoV_maEY_xg9EoZOrICbKrCsPNfW24bg3aC9ZYU5ORJA4sBL1TO4HTT5oDcgnyA1veDLqsnMEOdwTXgXNf4GW-WF4roWaC_e7MoJYH3ZFFhGCo0Rvep8UZilU1vS3GOROSKcJzB6QxvXzS0obKYNGiYDyGHQ1PtXFoK_QqYXJOzedbSAGVwD7Fx9FpJdD1RAKvVKZPsuDpQMnH1k-Cb4Xr7WM0BQny82cnTZp5vlve3OVfOmb0wlHRa5S9foFIRVSQh", progress: 95, matricula: '202301225', gender: 'F' },
+              { id: 'st-4', name: "João Vitor Rezende", class: "Turma A - 3º Ano", img: "https://lh3.googleusercontent.com/aida-public/AB6AXuBr8bD9ZzGhFEt7oLruZohpN8SJELwbHxG11_tSiiJu5T4bVdwWf4yrCVWYCbFHtMQ5UVaL5ULioUnlkyWiGw3gzgbiqySzjtjm1PDHPxur524EFEKchY3whP1deXqnANASENlzs-e_E99vbTm7a6mGhPhOtXIUHKHuIBCkfKVQAYGctKycj5IaP-kSNtnulfLt3TthD-cEDbx4tQTyw2gvFjttyvK2YOljZ7IWw0hAACZGrBf39sgtgvUZ8SoVelySNvCJKnTvOgMw", progress: 40, matricula: '202300554', gender: 'M' },
+              { id: 'st-5', name: "Lara Vasconcelos", class: "Turma C - 3º Ano", img: "https://lh3.googleusercontent.com/aida-public/AB6AXuAZCDyQjcZT49YUlxQl2LjrBSU4AGNV8wpgZUzz6x_eW-n-23oY3rh-5bbHCjnp_OwnfeCWJxah_8xD5m3I-318UQowMH1epfQmhp5oRAd4zgJx7G6h7SkH0rFOUY-FekT_U_mze4HPnrZC4cAg3azgr2j1sKmTnrF4qf7s007A7carK9Np5c3X0AwBk7ONLeX2LDFjfaYz2bGYeVKRfVrE1hvKt59L8a2oq7-7Fx9u0iV8lCM_Q3Vd3JsHYZsYTlrRXv_dmb4fTi4D", progress: 70, matricula: '202301102', gender: 'F' },
+              { id: 'st-6', name: "Gabriel Souza", class: "Turma B - 3º Ano", img: "https://images.unsplash.com/photo-1552058544-f2b08422138a?auto=format&fit=crop&q=80&w=150&h=150", progress: 50, matricula: '202406', gender: 'M' },
+              { id: 'st-7', name: "Helena Rocha", class: "Turma A - 3º Ano", img: "https://images.unsplash.com/photo-1554151228-14d9def656e4?auto=format&fit=crop&q=80&w=150&h=150", progress: 90, matricula: '202407', gender: 'F' },
+              { id: 'st-8', name: "Igor Mendes", class: "Turma C - 3º Ano", img: "https://images.unsplash.com/photo-1599566150163-29194dcaad36?auto=format&fit=crop&q=80&w=150&h=150", progress: 30, matricula: '202408', gender: 'M' },
+              { id: 'st-9', name: "Julia Paiva", class: "Turma B - 3º Ano", img: "https://images.unsplash.com/photo-1491349174775-aaafddd81942?auto=format&fit=crop&q=80&w=150&h=150", progress: 80, matricula: '202409', gender: 'F' },
+              { id: 'st-10', name: "Kevin Costa", class: "Turma A - 3º Ano", img: "https://images.unsplash.com/photo-1542909168-82c3e7fdca5c?auto=format&fit=crop&q=80&w=150&h=150", progress: 65, matricula: '202410', gender: 'M' },
+              { id: 'st-11', name: "Lucas Oliveira", class: "Turma B - 3º Ano", img: "https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&q=80&w=150&h=150", progress: 75, matricula: '202411', gender: 'M' },
+              { id: 'st-12', name: "Mariana Costa", class: "Turma C - 3º Ano", img: "https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&q=80&w=150&h=150", progress: 88, matricula: '202412', gender: 'F' },
+              { id: 'st-13', name: "Nataniel Cruz", class: "Turma A - 3º Ano", img: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&q=80&w=150&h=150", progress: 45, matricula: '202413', gender: 'M' },
+              { id: 'st-14', name: "Olivia Martins", class: "Turma B - 3º Ano", img: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=150&h=150", progress: 92, matricula: '202414', gender: 'F' },
+              { id: 'st-15', name: "Pedro Henrique", class: "Turma C - 3º Ano", img: "https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?auto=format&fit=crop&q=80&w=150&h=150", progress: 55, matricula: '202415', gender: 'M' }
+            ].map(s => ({
+              id: s.id,
+              name: s.name,
+              class: s.class,
+              img: s.img,
+              progress: s.progress,
+              matricula: s.matricula,
+              gender: s.gender,
+              email: `${s.id}@abba.com`,
+              last_access_at: new Date().toISOString(),
+              login_method: 'initial'
+            }));
+            await supabase.from('students').insert(formattedInitial);
+            
+            const mappedInitial = formattedInitial.map(s => ({
+              id: s.id,
+              name: s.name,
+              class: s.class,
+              img: s.img,
+              progress: s.progress,
+              matricula: s.matricula,
+              gender: s.gender,
+              email: s.email,
+              lastAccessAt: s.last_access_at,
+              loginMethod: s.login_method
+            }));
+            setStudents(mappedInitial);
+            if (mappedInitial.length > 0) {
+              setSelectedStudentName(mappedInitial[0].name);
+              if (!selectedStudentId) setSelectedStudentId(mappedInitial[0].id);
+            }
+          } else {
+            const mapped = dbStudents.map(s => ({
+              id: s.id,
+              name: s.name,
+              class: s.class || 'Turma A - 3º Ano',
+              img: s.img || `https://images.unsplash.com/photo-1535713875002?auto=format&fit=crop&q=80&w=150&h=150`,
+              progress: s.progress || 0,
+              matricula: s.matricula || `2026${Math.floor(1000 + Math.random() * 9000)}`,
+              gender: s.gender || 'M',
+              email: s.email || 'estudante@abba.com',
+              lastAccessAt: s.last_access_at,
+              loginMethod: s.login_method
+            }));
+            setStudents(mapped);
+            if (mapped.length > 0) {
+              setSelectedStudentName(mapped[0].name);
+              if (!selectedStudentId) setSelectedStudentId(mapped[0].id);
+            }
           }
-        });
-        setStudents(studentList);
-        if (studentList.length > 0) {
-          setSelectedStudentName(studentList[0].name);
+        } else {
+          // Fallback para logins
+          const { data: dbLogins, error: loginsErr } = await supabase
+            .from('student_logins')
+            .select('student_name, student_email')
+            .order('logged_at', { ascending: false });
+
+          if (dbLogins && !loginsErr) {
+            const uniqueNames = new Set();
+            const studentList: any[] = [];
+            dbLogins.forEach((login: any) => {
+              if (!uniqueNames.has(login.student_name)) {
+                uniqueNames.add(login.student_name);
+                studentList.push({
+                  id: `st-${Date.now()}-${Math.random().toString(36).substring(2, 5)}`,
+                  name: login.student_name,
+                  class: 'Turma A - 3º Ano',
+                  img: `https://images.unsplash.com/photo-1535713875002?auto=format&fit=crop&q=80&w=150&h=150`,
+                  progress: 0,
+                  matricula: `2026${Math.floor(1000 + Math.random() * 9000)}`,
+                  gender: 'M',
+                  email: login.student_email || 'estudante@abba.com',
+                  lastAccessAt: new Date().toISOString(),
+                  loginMethod: 'login'
+                });
+              }
+            });
+            setStudents(studentList);
+            if (studentList.length > 0) {
+              setSelectedStudentName(studentList[0].name);
+              if (!selectedStudentId) setSelectedStudentId(studentList[0].id);
+            }
+          }
         }
+      } catch (err) {
+        console.warn('Erro ao sincronizar estudantes:', err);
       }
 
     } catch (e) {
@@ -342,6 +431,7 @@ export const TeacherDashboardPremium: React.FC<TeacherDashboardPremiumProps> = (
   });
 
   const selectedSubmission = submissions.find(s => s.id === selectedSubmissionId);
+  const selectedStudent = students.find(s => s.id === selectedStudentId);
 
   // Obter cores para as linguagens
   const getLanguageDetails = (taskTitle: string) => {
@@ -456,6 +546,21 @@ export const TeacherDashboardPremium: React.FC<TeacherDashboardPremiumProps> = (
               <span>Tarefas Criadas</span>
             </div>
             <span className="px-2 py-0.5 bg-slate-800 text-slate-400 text-[10px] font-bold rounded-full">{tasks.length}</span>
+          </button>
+
+          <button
+            onClick={() => setActiveFolder('students')}
+            className={`w-full flex items-center justify-between px-3.5 py-3 rounded-2xl transition-all duration-300 font-medium text-xs ${
+              activeFolder === 'students' 
+                ? 'bg-gradient-to-r from-purple-500/10 to-pink-500/10 text-pink-400 border-l-[3px] border-pink-500 border border-white/5' 
+                : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
+            }`}
+          >
+            <div className="flex items-center gap-3">
+              <User className="w-[17px] h-[17px] shrink-0" />
+              <span>Lista de Alunos</span>
+            </div>
+            <span className="px-2 py-0.5 bg-slate-800 text-slate-400 text-[10px] font-bold rounded-full">{students.length}</span>
           </button>
 
           {/* Seção Turmas */}
@@ -717,6 +822,76 @@ export const TeacherDashboardPremium: React.FC<TeacherDashboardPremiumProps> = (
                     ))
                 )
               )}
+
+              {/* CASO E: FOLDER LISTA DE ALUNOS */}
+              {activeFolder === 'students' && (
+                students.length === 0 ? (
+                  <div className="text-center py-20 text-slate-500 italic text-xs">
+                    Nenhum aluno cadastrado.
+                  </div>
+                ) : (
+                  students
+                    .filter(s => s.name.toLowerCase().includes(searchQuery.toLowerCase()))
+                    .map((s) => {
+                      const isSelected = s.id === selectedStudentId;
+                      return (
+                        <motion.div
+                          key={`student-${s.id}`}
+                          onClick={() => setSelectedStudentId(s.id)}
+                          whileHover={{ scale: 1.01 }}
+                          whileTap={{ scale: 0.99 }}
+                          className={`p-4 rounded-3xl border cursor-pointer transition-all duration-300 text-left relative overflow-hidden group ${
+                            isSelected 
+                              ? 'bg-[#121327] border-purple-500/40 shadow-[0_8px_30px_rgb(168,85,247,0.06)]' 
+                              : 'bg-[#131526]/40 border-white/5 hover:border-white/10 hover:bg-[#131526]/60'
+                          }`}
+                        >
+                          {/* Indicador Ativo Lateral */}
+                          {isSelected && (
+                            <div className="absolute top-0 bottom-0 left-0 w-1 bg-gradient-to-b from-purple-500 to-pink-500" />
+                          )}
+                          
+                          <div className="flex gap-3 items-center">
+                            <img src={s.img} alt={s.name} className="w-10 h-10 rounded-full object-cover border border-white/10" />
+                            <div className="overflow-hidden flex-1">
+                              <span className="font-extrabold text-[13px] text-white truncate block group-hover:text-pink-400 transition-colors">
+                                {s.name}
+                              </span>
+                              <span className="text-[10px] text-slate-400 font-semibold block mt-0.5">
+                                {s.class}
+                              </span>
+                            </div>
+                            
+                            <button
+                              onClick={async (e) => {
+                                e.stopPropagation();
+                                if (confirm(`Tem certeza de que deseja excluir permanentemente o aluno ${s.name}?`)) {
+                                  try {
+                                    const { error } = await supabase.from('students').delete().eq('id', s.id);
+                                    if (error) throw error;
+                                    setStudents(prev => prev.filter(student => student.id !== s.id));
+                                    alert('Aluno excluído com sucesso! 🗑️');
+                                    if (selectedStudentId === s.id) {
+                                      setSelectedStudentId(null);
+                                    }
+                                  } catch (err) {
+                                    console.warn('Erro ao excluir no banco:', err);
+                                    setStudents(prev => prev.filter(student => student.id !== s.id));
+                                    alert('Aluno removido localmente.');
+                                  }
+                                }
+                              }}
+                              className="p-1.5 hover:bg-red-500/10 text-slate-400 hover:text-red-400 rounded-lg transition-colors border-none bg-transparent cursor-pointer shrink-0 z-30 flex items-center justify-center"
+                              title="Excluir aluno permanentemente"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </motion.div>
+                      );
+                    })
+                )
+              )}
             </>
           )}
 
@@ -742,9 +917,147 @@ export const TeacherDashboardPremium: React.FC<TeacherDashboardPremiumProps> = (
         <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar text-left">
           
           <AnimatePresence mode="wait">
-            {!selectedSubmission ? (
-              <motion.div 
-                key="empty-detail"
+            {activeFolder === 'students' ? (
+              !selectedStudent ? (
+                <motion.div 
+                  key="empty-student-detail"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  className="flex flex-col items-center justify-center py-32 text-center text-slate-500 gap-4"
+                >
+                  <div className="w-16 h-16 rounded-full bg-[#121325]/60 border border-white/5 flex items-center justify-center shadow-lg text-slate-400">
+                    <User className="w-8 h-8 animate-pulse text-purple-400" />
+                  </div>
+                  <div className="max-w-xs space-y-1">
+                    <h4 className="font-bold text-[14px] text-white">Nenhum aluno selecionado</h4>
+                    <p className="text-[11px] leading-relaxed text-slate-400">Escolha um aluno na lista ao lado para ver seu progresso, dados cadastrais e realizar ações de gerenciamento.</p>
+                  </div>
+                </motion.div>
+              ) : (
+                <motion.div
+                  key={`student-detail-${selectedStudent.id}`}
+                  initial={{ opacity: 0, scale: 0.99 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.99 }}
+                  transition={{ duration: 0.25 }}
+                  className="space-y-6"
+                >
+                  {/* Perfil Header */}
+                  <div className="p-6 rounded-3xl bg-[#131526]/40 border border-white/5 backdrop-blur-md flex flex-col md:flex-row items-center gap-5 relative overflow-hidden">
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-purple-500/10 rounded-full blur-2xl" />
+                    
+                    <img 
+                      src={selectedStudent.img} 
+                      alt={selectedStudent.name} 
+                      className="w-20 h-20 rounded-full object-cover border-2 border-purple-500/30 shadow-lg relative z-10" 
+                    />
+                    
+                    <div className="flex-1 text-center md:text-left relative z-10">
+                      <h3 className="font-extrabold text-xl text-white leading-tight">{selectedStudent.name}</h3>
+                      <p className="text-xs text-purple-400 font-semibold mt-1">{selectedStudent.class}</p>
+                      
+                      <div className="flex flex-wrap items-center justify-center md:justify-start gap-4 mt-3 text-[10px] text-slate-400 font-semibold">
+                        <span>Matrícula: <strong className="text-white">{selectedStudent.matricula}</strong></span>
+                        <span>Sexo: <strong className="text-white">{selectedStudent.gender === 'F' ? 'Feminino' : 'Masculino'}</strong></span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Informações de Acesso */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="p-6 rounded-3xl bg-[#131526]/40 border border-white/5 space-y-4">
+                      <h4 className="font-bold text-xs uppercase tracking-wider text-slate-400 border-b border-white/5 pb-2">Status de Acesso</h4>
+                      
+                      <div className="space-y-3">
+                        <div className="flex justify-between items-center text-xs">
+                          <span className="text-slate-500 font-medium">Método de Entrada:</span>
+                          <span className="px-2 py-0.5 bg-purple-500/10 text-purple-400 rounded-lg font-bold text-[10px] capitalize">
+                            {selectedStudent.loginMethod || 'Código'}
+                          </span>
+                        </div>
+                        <div className="flex justify-between items-center text-xs">
+                          <span className="text-slate-500 font-medium">Último Acesso:</span>
+                          <span className="text-white font-semibold">
+                            {selectedStudent.lastAccessAt 
+                              ? new Date(selectedStudent.lastAccessAt).toLocaleString() 
+                              : 'Sem registros'}
+                          </span>
+                        </div>
+                        <div className="flex justify-between items-center text-xs">
+                          <span className="text-slate-500 font-medium">E-mail Cadastrado:</span>
+                          <span className="text-pink-400 font-mono font-bold text-[11px] truncate max-w-[200px]" title={selectedStudent.email}>
+                            {selectedStudent.email || 'Não informado'}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="p-6 rounded-3xl bg-[#131526]/40 border border-white/5 space-y-4">
+                      <h4 className="font-bold text-xs uppercase tracking-wider text-slate-400 border-b border-white/5 pb-2">Desempenho Geral</h4>
+                      
+                      <div className="space-y-4 pt-1">
+                        <div>
+                          <div className="flex justify-between items-center text-xs mb-1.5">
+                            <span className="text-slate-500 font-medium">Progresso das Atividades:</span>
+                            <span className="text-white font-black">{selectedStudent.progress || 0}%</span>
+                          </div>
+                          <div className="w-full h-2 bg-white/5 rounded-full overflow-hidden">
+                            <div 
+                              className="h-full bg-gradient-to-r from-purple-500 via-pink-500 to-amber-500 transition-all duration-500" 
+                              style={{ width: `${selectedStudent.progress || 0}%` }}
+                            />
+                          </div>
+                        </div>
+
+                        <div className="flex justify-between items-center text-xs">
+                          <span className="text-slate-500 font-medium">Nível Alcançado:</span>
+                          <span className="px-2.5 py-0.5 bg-gradient-to-r from-purple-600/30 to-pink-600/30 border border-purple-500/30 text-purple-300 font-black text-[9px] uppercase rounded-full">
+                            {selectedStudent.progress >= 90 ? '🏆 Mestre' : selectedStudent.progress >= 70 ? '⭐️ Avançado' : selectedStudent.progress >= 50 ? '⚡️ Intermediário' : '🌱 Iniciante'}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Ação de Remoção Crítica */}
+                  <div className="p-6 rounded-3xl bg-red-950/10 border border-red-900/20 space-y-4">
+                    <div className="flex items-center gap-3">
+                      <ShieldAlert className="w-5 h-5 text-red-500 shrink-0" />
+                      <div>
+                        <h4 className="font-bold text-xs text-red-400">Área de Exclusão de Aluno</h4>
+                        <p className="text-[10px] text-slate-400">Esta ação é permanente e removerá o cadastro do aluno bem como seus registros associados.</p>
+                      </div>
+                    </div>
+                    
+                    <button
+                      onClick={async () => {
+                        if (confirm(`Tem certeza de que deseja excluir permanentemente o aluno ${selectedStudent.name}?`)) {
+                          try {
+                            const { error } = await supabase.from('students').delete().eq('id', selectedStudent.id);
+                            if (error) throw error;
+                            setStudents(prev => prev.filter(student => student.id !== selectedStudent.id));
+                            alert('Aluno excluído com sucesso! 🗑️');
+                            setSelectedStudentId(null);
+                          } catch (err) {
+                            console.warn('Erro ao excluir no banco:', err);
+                            setStudents(prev => prev.filter(student => student.id !== selectedStudent.id));
+                            alert('Aluno removido localmente.');
+                            setSelectedStudentId(null);
+                          }
+                        }
+                      }}
+                      className="w-full py-3 bg-red-950/40 hover:bg-red-950/60 border border-red-900/40 hover:border-red-500 text-red-400 font-bold text-xs rounded-2xl transition-all cursor-pointer"
+                    >
+                      Excluir permanentemente {selectedStudent.name} 🗑️
+                    </button>
+                  </div>
+                </motion.div>
+              )
+            ) : (
+              !selectedSubmission ? (
+                <motion.div 
+                  key="empty-detail"
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -10 }}
@@ -900,7 +1213,7 @@ export const TeacherDashboardPremium: React.FC<TeacherDashboardPremiumProps> = (
                   </button>
                 </div>
               </motion.div>
-            )}
+            ))}
           </AnimatePresence>
 
         </div>

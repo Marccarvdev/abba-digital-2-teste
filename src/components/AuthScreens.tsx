@@ -264,6 +264,35 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess, onGoTo
             login_method: 'code'
           }
         ]);
+
+        // Sincronizar na tabela 'students'
+        const { data: existingStudents } = await supabase
+          .from('students')
+          .select('*')
+          .eq('name', matchedRecord.name);
+
+        if (existingStudents && existingStudents.length > 0) {
+          await supabase.from('students').update({
+            last_access_at: new Date().toISOString(),
+            email: emailLower,
+            login_method: 'code'
+          }).eq('id', existingStudents[0].id);
+        } else {
+          await supabase.from('students').insert([
+            {
+              id: matchedRecord.codeId || `st-${Date.now()}`,
+              name: matchedRecord.name,
+              email: emailLower,
+              class: "Turma A - 3º Ano",
+              img: `https://images.unsplash.com/photo-${1535713875002 + Math.floor(Math.random() * 100)}?auto=format&fit=crop&q=80&w=150&h=150`,
+              progress: 0,
+              matricula: `2026${Math.floor(1000 + Math.random() * 9000)}`,
+              gender: 'M',
+              last_access_at: new Date().toISOString(),
+              login_method: 'code'
+            }
+          ]);
+        }
       } catch (dbErr) {
         console.warn('Erro ao registrar login do estudante no Supabase:', dbErr);
       }
@@ -366,6 +395,35 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess, onGoTo
             login_method: 'link'
           }
         ]);
+
+        // Sincronizar na tabela 'students'
+        const { data: existingStudents } = await supabase
+          .from('students')
+          .select('*')
+          .eq('name', sessionData.name);
+
+        if (existingStudents && existingStudents.length > 0) {
+          await supabase.from('students').update({
+            last_access_at: new Date().toISOString(),
+            email: `student-${sessionData.codeId}@abba.com`,
+            login_method: 'link'
+          }).eq('id', existingStudents[0].id);
+        } else {
+          await supabase.from('students').insert([
+            {
+              id: sessionData.codeId || `st-${Date.now()}`,
+              name: sessionData.name,
+              email: `student-${sessionData.codeId}@abba.com`,
+              class: "Turma A - 3º Ano",
+              img: `https://images.unsplash.com/photo-${1535713875002 + Math.floor(Math.random() * 100)}?auto=format&fit=crop&q=80&w=150&h=150`,
+              progress: 0,
+              matricula: `2026${Math.floor(1000 + Math.random() * 9000)}`,
+              gender: 'M',
+              last_access_at: new Date().toISOString(),
+              login_method: 'link'
+            }
+          ]);
+        }
       } catch (dbErr) {
         console.warn('Erro ao registrar login do estudante no Supabase:', dbErr);
       }

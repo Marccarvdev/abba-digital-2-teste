@@ -457,38 +457,83 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ user, onLogo
         });
       }
 
-      // 4. Sincronizar logins para enriquecer a lista de alunos local
-      const { data: dbLogins, error: loginsErr } = await supabase
-        .from('student_logins')
-        .select('*')
-        .order('logged_at', { ascending: false });
-      if (dbLogins && !loginsErr) {
-        setStudents(prev => {
-          const updated = [...prev];
-          dbLogins.forEach((login: any) => {
-            const index = updated.findIndex(s => s.name.toLowerCase() === login.student_name.toLowerCase());
-            if (index !== -1) {
-              updated[index].email = login.student_email;
-              updated[index].loginMethod = login.login_method;
-              updated[index].lastAccessAt = login.logged_at;
-            } else {
-              updated.push({
-                id: 'st-' + login.id,
-                name: login.student_name,
-                class: "Turma A - 3º Ano",
-                img: `https://images.unsplash.com/photo-${1535713875002 + Math.floor(Math.random() * 100)}?auto=format&fit=crop&q=80&w=150&h=150`,
-                progress: 0,
-                matricula: `2026${Math.floor(1000 + Math.random() * 9000)}`,
-                gender: 'M',
-                email: login.student_email,
-                lastAccessAt: login.logged_at,
-                loginMethod: login.login_method
+      // 4. Sincronizar alunos da tabela 'students' ou fallback para 'student_logins'
+      try {
+        const { data: dbStudents, error: studentsErr } = await supabase
+          .from('students')
+          .select('*');
+
+        if (dbStudents && !studentsErr) {
+          if (dbStudents.length === 0) {
+            // Auto-seed table
+            const formattedInitial = INITIAL_STUDENTS.map(s => ({
+              id: s.id,
+              name: s.name,
+              class: s.class,
+              img: s.img,
+              progress: s.progress,
+              matricula: s.matricula,
+              gender: s.gender,
+              email: `${s.id}@abba.com`,
+              last_access_at: new Date().toISOString(),
+              login_method: 'initial'
+            }));
+            await supabase.from('students').insert(formattedInitial);
+            setStudents(INITIAL_STUDENTS);
+            localStorage.setItem('abba_students_list', JSON.stringify(INITIAL_STUDENTS));
+          } else {
+            const mapped = dbStudents.map(s => ({
+              id: s.id,
+              name: s.name,
+              class: s.class || 'Turma A - 3º Ano',
+              img: s.img || `https://images.unsplash.com/photo-1535713875002?auto=format&fit=crop&q=80&w=150&h=150`,
+              progress: s.progress || 0,
+              matricula: s.matricula || `2026${Math.floor(1000 + Math.random() * 9000)}`,
+              gender: s.gender || 'M',
+              email: s.email || 'estudante@abba.com',
+              lastAccessAt: s.last_access_at,
+              loginMethod: s.login_method
+            }));
+            setStudents(mapped);
+            localStorage.setItem('abba_students_list', JSON.stringify(mapped));
+          }
+        } else {
+          // Fallback to student logins
+          const { data: dbLogins, error: loginsErr } = await supabase
+            .from('student_logins')
+            .select('*')
+            .order('logged_at', { ascending: false });
+          if (dbLogins && !loginsErr) {
+            setStudents(prev => {
+              const updated = [...prev];
+              dbLogins.forEach((login: any) => {
+                const index = updated.findIndex(s => s.name.toLowerCase() === login.student_name.toLowerCase());
+                if (index !== -1) {
+                  updated[index].email = login.student_email;
+                  updated[index].loginMethod = login.login_method;
+                  updated[index].lastAccessAt = login.logged_at;
+                } else {
+                  updated.push({
+                    id: 'st-' + login.id,
+                    name: login.student_name,
+                    class: "Turma A - 3º Ano",
+                    img: `https://images.unsplash.com/photo-${1535713875002 + Math.floor(Math.random() * 100)}?auto=format&fit=crop&q=80&w=150&h=150`,
+                    progress: 0,
+                    matricula: `2026${Math.floor(1000 + Math.random() * 9000)}`,
+                    gender: 'M',
+                    email: login.student_email,
+                    lastAccessAt: login.logged_at,
+                    loginMethod: login.login_method
+                  });
+                }
               });
-            }
-          });
-          localStorage.setItem('abba_students_list', JSON.stringify(updated));
-          return updated;
-        });
+              localStorage.setItem('abba_students_list', JSON.stringify(updated));
+              return updated;
+            });
+          }
+        }
+      } catch (err) {
+        console.warn('Erro ao carregar tabela students, usando logins de backup:', err);
       }
     } catch (err) {
       console.warn('Erro ao carregar dados do Supabase:', err);
@@ -3132,6 +3177,28 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ user, onLogo
                             <p className="font-bold text-xs truncate leading-tight">{s.name}</p>
                             <p className="text-[10px] text-slate-400 truncate mt-0.5">{s.class}</p>
                           </div>
+
+                          <button
+                            type="button"
+                            onClick={async (e) => {
+                              e.stopPropagation();
+                              if (confirm(`Tem certeza de que deseja excluir permanentemente o aluno ${s.name}?`)) {
+                                setStudents(prev => prev.filter(student => student.id !== s.id));
+                                const updatedLocal = students.filter(student => student.id !== s.id);
+                                localStorage.setItem('abba_students_list', JSON.stringify(updatedLocal));
+                                try {
+                                  await supabase.from('students').delete().eq('id', s.id);
+                                } catch (err) {
+                                  console.warn('Erro ao excluir no banco:', err);
+                                }
+                                alert('Aluno excluído com sucesso! 🗑️');
+                              }
+                            }}
+                            className="p-1 text-slate-400 hover:text-red-500 rounded-lg hover:bg-red-50 transition-colors z-30 ml-2 border-none bg-transparent cursor-pointer flex items-center justify-center shrink-0"
+                            title="Excluir aluno permanentemente"
+                          >
+                            <span className="material-symbols-outlined text-[16px]">delete</span>
+                          </button>
                         </div>
                       );
                     })}
