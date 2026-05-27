@@ -4,7 +4,7 @@ import { User, TaskItem, SavedWord } from '../types';
 import abbaLogo from '../assets/logo abba.svg';
 import { cardImageBase64 } from '../base64Data/cardBase64';
 import Loader from './Loader';
-import { supabase } from '../supabaseClient';
+import { supabase, logComponentAction } from '../supabaseClient';
 
 const parseTeacherNoteAndFiles = (rawNote: string) => {
   if (!rawNote) return { note: '', files: [] };
@@ -139,6 +139,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
         .getPublicUrl(filePath);
 
       setTaskFiles(prev => [...prev, { name: file.name, size: sizeLabel, url: publicUrl }]);
+      logComponentAction(user.name, user.email || '', 'FILE_UPLOADED', { fileName: file.name, fileSize: sizeLabel, url: publicUrl });
       alert(`Arquivo "${file.name}" enviado com sucesso!`);
     } catch (err: any) {
       console.error('Erro ao fazer upload do arquivo:', err);
@@ -687,6 +688,10 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
           task_files: JSON.stringify(taskFiles)
         }
       ]);
+      logComponentAction(user.name, newSentItem.studentEmail, 'TASK_SUBMITTED', {
+        taskTitle: newSentItem.taskTitle,
+        spelledWordsCount: newSentItem.spelledWordsCount
+      });
       console.log('⚡ Submission synced with Supabase!');
     } catch (err) {
       console.warn('Erro ao salvar submissão no Supabase:', err);
