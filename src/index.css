@@ -362,3 +362,11 @@ html {
   -webkit-mask-image: linear-gradient(to bottom, black 35%, transparent 100%);
 }
 
+/* Disable smooth scrolling globally during active drag-and-drop to eliminate scroll lag and make scrolling instant */
+.dragging-active, 
+.dragging-active *, 
+html.dragging-active,
+html.dragging-active * {
+  scroll-behavior: auto !important;
+}
+

@@ -949,6 +949,19 @@ export default function App() {
   // Continuous smooth hardware-accelerated auto-scrolling loop during active drag-and-drop
   useEffect(() => {
     const isDragging = draggedCube !== null || draggedTrayIndex !== null || draggedShelfIndex !== null;
+    
+    if (isDragging) {
+      document.documentElement.classList.add('dragging-active');
+      if (boardRef.current) {
+        boardRef.current.classList.add('dragging-active');
+      }
+    } else {
+      document.documentElement.classList.remove('dragging-active');
+      if (boardRef.current) {
+        boardRef.current.classList.remove('dragging-active');
+      }
+    }
+
     if (!isDragging) return;
 
     let animFrameId: number;
@@ -1013,6 +1026,10 @@ export default function App() {
     animFrameId = requestAnimationFrame(tick);
     return () => {
       cancelAnimationFrame(animFrameId);
+      document.documentElement.classList.remove('dragging-active');
+      if (boardRef.current) {
+        boardRef.current.classList.remove('dragging-active');
+      }
     };
   }, [draggedCube, draggedTrayIndex, draggedShelfIndex]);
 
