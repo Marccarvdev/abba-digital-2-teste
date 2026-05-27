@@ -3724,10 +3724,10 @@ export default function App() {
       <AnimatePresence>
         {((draggedCube && draggedLetter) || (draggedTrayIndex !== null && draggedBoardLetter !== null) || (draggedShelfIndex !== null)) && (
           <div
-            className="pointer-events-none fixed z-50 w-[calc((100vw-6rem)/5)] h-[calc((100vw-6rem)/5)] sm:w-[66px] sm:h-[66px] md:w-[76px] md:h-[76px] -translate-x-1/2 -translate-y-1/2 overflow-visible"
+            className="pointer-events-none absolute z-50 w-[calc((100vw-6rem)/5)] h-[calc((100vw-6rem)/5)] sm:w-[66px] sm:h-[66px] md:w-[76px] md:h-[76px] -translate-x-1/2 -translate-y-1/2 overflow-visible"
             style={{
-              left: pointerPos.x,
-              top: pointerPos.y,
+              left: pointerPos.x + window.scrollX,
+              top: pointerPos.y + window.scrollY,
             }}
           >
             {draggedShelfIndex !== null ? (
