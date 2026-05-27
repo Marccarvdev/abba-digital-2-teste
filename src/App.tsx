@@ -970,12 +970,12 @@ export default function App() {
           const topThreshold = boardRect.top + 75;
 
           if (eY > bottomThreshold && eY < boardRect.bottom + 50) {
-            // Smoothly calculate scroll intensity based on proximity to bottom
-            const intensity = Math.min(16, Math.max(2, (eY - bottomThreshold) / 3));
+            // Highly responsive scroll speed based on proximity to bottom
+            const intensity = Math.min(45, Math.max(2, (eY - bottomThreshold) / 1.8));
             boardRef.current.scrollBy({ top: intensity });
           } else if (eY < topThreshold && eY > boardRect.top - 50) {
-            // Smoothly calculate scroll intensity based on proximity to top
-            const intensity = Math.min(16, Math.max(2, (topThreshold - eY) / 3));
+            // Highly responsive scroll speed based on proximity to top
+            const intensity = Math.min(45, Math.max(2, (topThreshold - eY) / 1.8));
             boardRef.current.scrollBy({ top: -intensity });
           }
         }
@@ -985,10 +985,10 @@ export default function App() {
       const winHeight = window.innerHeight;
       const winThreshold = 140;
       if (eY < winThreshold) {
-        const winIntensity = Math.min(20, Math.max(3, (winThreshold - eY) / 2.5));
+        const winIntensity = Math.min(55, Math.max(3, (winThreshold - eY) / 1.5));
         window.scrollBy({ top: -winIntensity });
       } else if (eY > winHeight - winThreshold) {
-        const winIntensity = Math.min(20, Math.max(3, (eY - (winHeight - winThreshold)) / 2.5));
+        const winIntensity = Math.min(55, Math.max(3, (eY - (winHeight - winThreshold)) / 1.5));
         window.scrollBy({ top: winIntensity });
       }
 
